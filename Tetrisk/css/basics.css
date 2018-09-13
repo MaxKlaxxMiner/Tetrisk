@@ -2,3 +2,114 @@
 {
   font-family: arial;
 }
+
+/* game field as table */
+table .game
+{
+  border-collapse: collapse;
+}
+
+/* gamefield default styles */
+table .game, .game td
+{
+  border: 1px solid #333;
+  background: #000;
+  margin: 0;
+  padding: 0;
+}
+
+/* black cell (empty) */
+.game td .e
+{
+  background: #000;
+}
+
+/* white cell (blinking) */
+.game td .w
+{
+  background: #fff;
+}
+
+/* cyan cell (pushed elements) */
+.game td .p
+{
+  background: #0cc;
+}
+
+/* blue cell (2x2 block) 
+
+  ##
+  ##
+
+*/
+.game td .b
+{
+  background: #33f;
+}
+
+/* red cell (4x1 row)
+
+  ####
+
+*/
+.game td .r
+{
+  background: #f30;
+}
+
+/* yellow cell (triangle)
+
+  ###
+   #
+
+*/
+.game td .t
+{
+  background: #fc0;
+}
+
+/* orange cell (z-element)
+
+  ##
+   ##
+
+*/
+.game td .z
+{
+  background: #f60;
+}
+
+/* magenta cell (s-element)
+
+   ##
+  ##
+
+*/
+.game td .s
+{
+  background: #c0c;
+}
+
+/* green cell (l-element)
+
+  #
+  #
+  ##
+
+*/
+.game td .l
+{
+  background: #0c0;
+}
+
+/* lightblue cell (anti l-element)
+
+   #
+   #
+  ##
+
+*/
+.game td .a
+{
+  background: #39f;
+}
