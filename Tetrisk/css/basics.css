@@ -3,37 +3,31 @@
   font-family: arial;
 }
 
-/* game field as table */
-table .game
+/* gamefield default styles */
+table.game, .game td
 {
   border-collapse: collapse;
-}
-
-/* gamefield default styles */
-table .game, .game td
-{
-  border: 1px solid #333;
-  background: #000;
+  border: 1px solid #000;
   margin: 0;
   padding: 0;
 }
 
 /* black cell (empty) */
-.game td .e
+.game td.e
 {
-  background: #000;
+  background: #333;
 }
 
 /* white cell (blinking) */
-.game td .w
+.game td.w
 {
   background: #fff;
 }
 
 /* cyan cell (pushed elements) */
-.game td .p
+.game td.p
 {
-  background: #0cc;
+  background: #0fc;
 }
 
 /* blue cell (2x2 block) 
@@ -42,9 +36,9 @@ table .game, .game td
   ##
 
 */
-.game td .b
+.game td.b
 {
-  background: #33f;
+  background: #34f;
 }
 
 /* red cell (4x1 row)
@@ -52,9 +46,9 @@ table .game, .game td
   ####
 
 */
-.game td .r
+.game td.r
 {
-  background: #f30;
+  background: #d20;
 }
 
 /* yellow cell (triangle)
@@ -63,7 +57,7 @@ table .game, .game td
    #
 
 */
-.game td .t
+.game td.t
 {
   background: #fc0;
 }
@@ -74,9 +68,9 @@ table .game, .game td
    ##
 
 */
-.game td .z
+.game td.z
 {
-  background: #f60;
+  background: #d60;
 }
 
 /* magenta cell (s-element)
@@ -85,9 +79,9 @@ table .game, .game td
   ##
 
 */
-.game td .s
+.game td.s
 {
-  background: #c0c;
+  background: #b2a;
 }
 
 /* green cell (l-element)
@@ -97,9 +91,9 @@ table .game, .game td
   ##
 
 */
-.game td .l
+.game td.l
 {
-  background: #0c0;
+  background: #3b0;
 }
 
 /* lightblue cell (anti l-element)
@@ -109,7 +103,7 @@ table .game, .game td
   ##
 
 */
-.game td .a
+.game td.a
 {
-  background: #39f;
+  background: #29f;
 }
