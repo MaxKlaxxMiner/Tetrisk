@@ -1,4 +1,5 @@
 ﻿/* tslint:disable:one-line max-line-length interface-name comment-format */
+/// <reference path="boxes.ts" />
 
 //#region # enum CellType
 enum CellType
@@ -127,7 +128,7 @@ class Field
   //#endregion
 
   /** aktualisert die Farben auf dem Spielfeld (sofern notwendig) */
-  view()
+  view() : void
   {
     var cells = this.cells;
     for (var i = 0; i < cells.length; i++)
@@ -139,5 +140,64 @@ class Field
         cell.view = cell.data;
       }
     }
+  }
+
+  /** setzt eine Box in das Spielfeld (ohne Bereichsprüfung)
+   * @param x X-Position der Box
+   * @param y Y-Position der Box
+   * @param box Box, welche gesetzt werden soll
+   */
+  setBox(x: number, y: number, box: Box) : void
+  {
+    x += box.ofsX;
+    y += box.ofsY;
+    var bc = box.cells;
+    for (var i = 0; i < bc.length; i++)
+    {
+      var cx = x + bc[i].x;
+      var cy = y + bc[i].y;
+      if (cy < 0) continue;
+      this.cells[cx + cy * this.width].data = box.cellType;
+    }
+  }
+
+  /** entfernt eine Box wieder aus dem Spielfeld
+   * @param x X-Position der Box
+   * @param y Y-Position der Box
+   * @param box Box, welche entfernt werden soll
+   */
+  delBox(x: number, y: number, box: Box): void
+  {
+    x += box.ofsX;
+    y += box.ofsY;
+    var bc = box.cells;
+    for (var i = 0; i < bc.length; i++)
+    {
+      var cx = x + bc[i].x;
+      var cy = y + bc[i].y;
+      if (cy < 0) continue;
+      this.cells[cx + cy * this.width].data = CellType.Empty;
+    }
+  }
+
+  /** prüft, ob eine bestimmte Box gesetzt werden kann
+   * @param x X-Position der Box
+   * @param y Y-Position der Box
+   * @param box Box, welche geprüft werden soll
+   */
+  checkBox(x: number, y: number, box: Box): boolean
+  {
+    x += box.ofsX;
+    y += box.ofsY;
+    var bc = box.cells;
+    for (var i = 0; i < bc.length; i++)
+    {
+      var cx = x + bc[i].x;
+      var cy = y + bc[i].y;
+      if (cy < 0) continue;
+      if (cx < 0 || cx >= this.width || cy >= this.height) return false;
+      if (this.cells[cx + cy * this.width].data !== CellType.Empty) return false;
+    }
+    return true;
   }
 }

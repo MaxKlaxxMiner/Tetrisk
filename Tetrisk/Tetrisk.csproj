@@ -75,6 +75,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <TypeScriptCompile Include="ts\boxes.ts" />
     <TypeScriptCompile Include="ts\field.ts" />
     <TypeScriptCompile Include="ts\game.ts" />
   </ItemGroup>

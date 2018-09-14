@@ -1,4 +1,5 @@
 /* tslint:disable:one-line max-line-length interface-name comment-format */
+/// <reference path="boxes.ts" />
 //#region # enum CellType
 var CellType;
 (function (CellType) {
@@ -94,6 +95,61 @@ var Field = (function () {
                 cell.view = cell.data;
             }
         }
+    };
+    /** setzt eine Box in das Spielfeld (ohne Bereichsprüfung)
+     * @param x X-Position der Box
+     * @param y Y-Position der Box
+     * @param box Box, welche gesetzt werden soll
+     */
+    Field.prototype.setBox = function (x, y, box) {
+        x += box.ofsX;
+        y += box.ofsY;
+        var bc = box.cells;
+        for (var i = 0; i < bc.length; i++) {
+            var cx = x + bc[i].x;
+            var cy = y + bc[i].y;
+            if (cy < 0)
+                continue;
+            this.cells[cx + cy * this.width].data = box.cellType;
+        }
+    };
+    /** entfernt eine Box wieder aus dem Spielfeld
+     * @param x X-Position der Box
+     * @param y Y-Position der Box
+     * @param box Box, welche entfernt werden soll
+     */
+    Field.prototype.delBox = function (x, y, box) {
+        x += box.ofsX;
+        y += box.ofsY;
+        var bc = box.cells;
+        for (var i = 0; i < bc.length; i++) {
+            var cx = x + bc[i].x;
+            var cy = y + bc[i].y;
+            if (cy < 0)
+                continue;
+            this.cells[cx + cy * this.width].data = 0 /* Empty */;
+        }
+    };
+    /** prüft, ob eine bestimmte Box gesetzt werden kann
+     * @param x X-Position der Box
+     * @param y Y-Position der Box
+     * @param box Box, welche geprüft werden soll
+     */
+    Field.prototype.checkBox = function (x, y, box) {
+        x += box.ofsX;
+        y += box.ofsY;
+        var bc = box.cells;
+        for (var i = 0; i < bc.length; i++) {
+            var cx = x + bc[i].x;
+            var cy = y + bc[i].y;
+            if (cy < 0)
+                continue;
+            if (cx < 0 || cx >= this.width || cy >= this.height)
+                return false;
+            if (this.cells[cx + cy * this.width].data !== 0 /* Empty */)
+                return false;
+        }
+        return true;
     };
     return Field;
 })();
