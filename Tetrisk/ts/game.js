@@ -7,7 +7,7 @@ window.onload = function () {
     if (div) {
         field = new Field(div, 10, 16, 1000, 600);
         for (var i = 0; i < 9; i++) {
-            field.cells[i + 15 * 10].data = CellType.Pushed;
+            field.cells[i + 15 * 10].data = 2 /* Pushed */;
         }
         field.setBox(0, 13, boxes[0]);
         field.setBox(6, 14, boxes[1]);
