@@ -5,7 +5,7 @@ var CellType;
 (function (CellType) {
     /** Leere Zelle (schwarz) */
     CellType[CellType["Empty"] = 0] = "Empty";
-    /** Weißes aufblinken */
+    /** Weißes aufblinken (z.B. wenn eine Zeile entfernt wird) */
     CellType[CellType["Blink"] = 1] = "Blink";
     /** hochgeschobenes Feld (vom Gegner) */
     CellType[CellType["Pushed"] = 2] = "Pushed";
@@ -108,8 +108,9 @@ var Field = (function () {
         for (var i = 0; i < bc.length; i++) {
             var cx = x + bc[i].x;
             var cy = y + bc[i].y;
-            if (cy < 0)
+            if (cy < 0) {
                 continue;
+            } // Zelle oben außerhalb des Spielfeldes -> ignorieren
             this.cells[cx + cy * this.width].data = box.cellType;
         }
     };
@@ -118,15 +119,16 @@ var Field = (function () {
      * @param y Y-Position der Box
      * @param box Box, welche entfernt werden soll
      */
-    Field.prototype.delBox = function (x, y, box) {
+    Field.prototype.removeBox = function (x, y, box) {
         x += box.ofsX;
         y += box.ofsY;
         var bc = box.cells;
         for (var i = 0; i < bc.length; i++) {
             var cx = x + bc[i].x;
             var cy = y + bc[i].y;
-            if (cy < 0)
+            if (cy < 0) {
                 continue;
+            } // Zelle oben außerhalb des Spielfeldes -> ignorieren
             this.cells[cx + cy * this.width].data = 0 /* Empty */;
         }
     };
@@ -142,14 +144,17 @@ var Field = (function () {
         for (var i = 0; i < bc.length; i++) {
             var cx = x + bc[i].x;
             var cy = y + bc[i].y;
-            if (cy < 0)
+            if (cy < 0) {
                 continue;
-            if (cx < 0 || cx >= this.width || cy >= this.height)
+            } // Zelle oben außerhalb des Spielfeldes -> kein Fehler
+            if (cx < 0 || cx >= this.width || cy >= this.height) {
                 return false;
-            if (this.cells[cx + cy * this.width].data !== 0 /* Empty */)
+            } // links, rechts oder unten außerhalb des Spielfeldes -> Fehler
+            if (this.cells[cx + cy * this.width].data !== 0 /* Empty */) {
                 return false;
+            } // Zelle ist bereits belegt -> Fehler
         }
-        return true;
+        return true; // keine verbotenen Zellen gefunden -> OK
     };
     return Field;
 })();

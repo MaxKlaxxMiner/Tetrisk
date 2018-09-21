@@ -2,32 +2,202 @@
 /// <reference path="boxes.ts" />
 /// <reference path="field.ts" />
 
-var field: Field;
+var game: Game;
+
+var keys = {};
+
+interface GameKeys
+{
+  left: number[];
+  right: number[];
+  down: number[];
+  clockwise: number[];
+  counterclockwise: number[];
+}
+
+class Game
+{
+  /** merkt sich das aktuelle Spielfeld */
+  field: Field;
+  /** merkt sich die aktuell eingestellten Tasten */
+  private keys: GameKeys;
+  /** gibt an, ob und wie lange die Taste zum links-bewegen gedrükt wurde */
+  private keyLeft = 0;
+  /** gibt an, ob und wie lange die Taste zum rechts-bewegen gedrückt wurde */
+  private keyRight = 0;
+  /** gibt an, ob und wie lange die Taste zum nachunten-bewegen gedrückt wurde */
+  private keyDown = 0;
+  /** gibt an, ob eine Taste zum drehen gedrückt wurde */
+  private keyRotate = false;
+  /** merkt sich die Anzahl der Ticks, welche bereits verarbeitet wurden */
+  private ticks = 0;
+  /** merkt sich das aktuelle Tick-Handle */
+  private tickHandle;
+
+  //#region // --- constructor ---
+  constructor(parentDiv: HTMLElement, fieldWidth: number, fieldHeight: number, maxWidth: number, maxHeight: number)
+  {
+    // --- Spielfeld initialisieren ---
+    this.field = new Field(parentDiv, fieldWidth, fieldHeight, maxWidth, maxHeight);
+
+    // --- Standard-Tastencodes setzen ---
+    this.setKeys(
+      // links
+      [
+        65, // A
+        37, // Left
+        100 // Num 4
+      ],
+      // rechts
+      [
+        67, // D
+        39, // Right
+        102 // Num 6
+      ],
+      // unten
+      [
+        83, // S
+        40, // Down
+        98  // Num 2
+      ],
+      // rechts drehen
+      [
+        69, // E
+        33, // Page Up
+        105 // Num 9
+      ],
+      // links drehen
+      [
+        87, // W
+        38, // Up
+        104 // Num 8
+      ]);
+  }
+  //#endregion
+
+  /** ändert die Tastensteuerung 
+   * @param left Tastcodes für Linksbewegung (null = um die vorherige Einstellung zu behalten)
+   * @param right Tastencodes für Rechtsbewegung (null = um die vorherige Einstellung zu behalten)
+   * @param down Tastencodes für den Stein nach unten zu bewegen (null = um die vorherige Einstellung zu behalten)
+   * @param clockwise Tastencodes um den Stein rechtsrum zu drehen (null = um die vorherige Einstellung zu behalten)
+   * @param counterclockwise Tastencodes um den Stein linksrum zu drehen (null = um die vorherige Einstellung zu behalten)
+   */
+  setKeys(left: number[], right: number[], down: number[], clockwise: number[], counterclockwise: number[]): void
+  {
+    this.keys =
+    {
+      left: left || this.keys.left,
+      right: right || this.keys.right,
+      down: down || this.keys.down,
+      clockwise: clockwise || this.keys.clockwise,
+      counterclockwise: counterclockwise || this.keys.counterclockwise
+    };
+  }
+
+  /** prüft, ob eine dieser Tasten gedrückt wurde 
+   * @param checkCodes Tastencodes, welche geprüft werden sollen
+   */
+  static isPressed(checkCodes: number[]) : boolean
+  {
+    for (var i = 0; i < checkCodes.length; i++)
+    {
+      if (keys[checkCodes[i]]) return true; // einer der Tasten wurde gedrückt
+    }
+    return false; // keine gedrückte Taste gefunden
+  }
+
+  start(): void
+  {
+    if (this.tickHandle) { return; }; // todo: restart running process
+    var my = this;
+    var last = Date.now();
+    this.tickHandle = setInterval(() =>
+    {
+      var next = Date.now();
+      my.tick(next - last);
+      last = next;
+    }, 1);
+  }
+
+  /** führt eine oder mehrere Tick-Berechnungen durch
+   * @param count Anzahl der Tick-Berechnungen, welche durchgeführt werden sollen (1000 Ticks = 1 Sekunde)
+   */
+  tick(count: number): void
+  {
+    if (count <= 0) { return; }
+
+    // --- gedrückte Tasten abfragen ---
+    this.keyLeft = Game.isPressed(this.keys.left) && this.keyLeft === 0 ? 1 : 0;
+    this.keyRight = Game.isPressed(this.keys.right) && this.keyRight === 0 ? 1 : 0;
+    this.keyDown = Game.isPressed(this.keys.down) && this.keyDown === 0 ? 1 : 0;
+    var rCw = Game.isPressed(this.keys.clockwise);
+    var rCc = Game.isPressed(this.keys.counterclockwise);
+    if (rCw !== rCc)
+    {
+      if (!this.keyRotate)
+      {
+        this.keyRotate = true;
+        // todo: rotate box
+      }
+    }
+    else
+    {
+      this.keyRotate = false;
+    }
+
+    // --- Ablauf-Ticks berechnen ---
+    while (count > 0)
+    {
+      if (this.keyLeft > 0)
+      {
+        // todo: move box left
+        this.keyLeft++;
+      }
+
+      if (this.keyRight > 0)
+      {
+        // todo: move box right
+        this.keyRight++;
+      }
+
+      if (this.keyDown > 0)
+      {
+        // todo: move box down
+        this.keyDown++;
+      }
+      else
+      {
+        // todo: autotimed box down
+      }
+
+      this.ticks++;
+      count--;
+    }
+
+    this.field.view();
+
+    document.title = "Ticks: " + this.ticks;
+  }
+}
 
 window.onload = () =>
 {
+  document.body.onkeydown = (e: KeyboardEvent) =>
+  {
+    keys[e.keyCode] = true;
+    document.title = "pressed key: " + e.keyCode;
+  };
+  document.body.onkeyup = (e: KeyboardEvent) =>
+  {
+    keys[e.keyCode] = false;
+  };
+
   var div = document.getElementById("game");
   if (div)
   {
-    field = new Field(div, 10, 16, 1000, 600);
-
-    for (var i = 0; i < 9; i++)
-    {
-      field.cells[i + 15 * 10].data = CellType.Pushed;
-    }
-
-    field.setBox(0, 13, boxes[0]);
-    field.setBox(6, 14, boxes[1]);
-    field.setBox(3, 14, boxes[2].rotLeft.rotLeft);
-    field.setBox(4, 12, boxes[3]);
-    field.setBox(1, 12, boxes[4].rotLeft);
-    field.setBox(7, 13, boxes[5].rotLeft.rotLeft);
-    field.setBox(0, 11, boxes[6].rotLeft);
-
-    field.setBox(9, 8, boxes[1].rotLeft);
-
-    field.view();
-
+    game = new Game(div, 10, 16, 1000, 600);
+    game.start();
+    
     console.log("init: ok");
   }
   else

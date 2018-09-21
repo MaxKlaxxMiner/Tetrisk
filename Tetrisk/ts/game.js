@@ -1,23 +1,142 @@
 /* tslint:disable:one-line max-line-length interface-name comment-format */
 /// <reference path="boxes.ts" />
 /// <reference path="field.ts" />
-var field;
+var game;
+var keys = {};
+var Game = (function () {
+    //#region // --- constructor ---
+    function Game(parentDiv, fieldWidth, fieldHeight, maxWidth, maxHeight) {
+        /** gibt an, ob und wie lange die Taste zum links-bewegen gedrükt wurde */
+        this.keyLeft = 0;
+        /** gibt an, ob und wie lange die Taste zum rechts-bewegen gedrückt wurde */
+        this.keyRight = 0;
+        /** gibt an, ob und wie lange die Taste zum nachunten-bewegen gedrückt wurde */
+        this.keyDown = 0;
+        /** gibt an, ob eine Taste zum drehen gedrückt wurde */
+        this.keyRotate = false;
+        /** merkt sich die Anzahl der Ticks, welche bereits verarbeitet wurden */
+        this.ticks = 0;
+        // --- Spielfeld initialisieren ---
+        this.field = new Field(parentDiv, fieldWidth, fieldHeight, maxWidth, maxHeight);
+        // --- Standard-Tastencodes setzen ---
+        this.setKeys([
+            65,
+            37,
+            100
+        ], [
+            67,
+            39,
+            102
+        ], [
+            83,
+            40,
+            98
+        ], [
+            69,
+            33,
+            105
+        ], [
+            87,
+            38,
+            104
+        ]);
+    }
+    //#endregion
+    /** ändert die Tastensteuerung
+     * @param left Tastcodes für Linksbewegung (null = um die vorherige Einstellung zu behalten)
+     * @param right Tastencodes für Rechtsbewegung (null = um die vorherige Einstellung zu behalten)
+     * @param down Tastencodes für den Stein nach unten zu bewegen (null = um die vorherige Einstellung zu behalten)
+     * @param clockwise Tastencodes um den Stein rechtsrum zu drehen (null = um die vorherige Einstellung zu behalten)
+     * @param counterclockwise Tastencodes um den Stein linksrum zu drehen (null = um die vorherige Einstellung zu behalten)
+     */
+    Game.prototype.setKeys = function (left, right, down, clockwise, counterclockwise) {
+        this.keys = {
+            left: left || this.keys.left,
+            right: right || this.keys.right,
+            down: down || this.keys.down,
+            clockwise: clockwise || this.keys.clockwise,
+            counterclockwise: counterclockwise || this.keys.counterclockwise
+        };
+    };
+    /** prüft, ob eine dieser Tasten gedrückt wurde
+     * @param checkCodes Tastencodes, welche geprüft werden sollen
+     */
+    Game.isPressed = function (checkCodes) {
+        for (var i = 0; i < checkCodes.length; i++) {
+            if (keys[checkCodes[i]])
+                return true; // einer der Tasten wurde gedrückt
+        }
+        return false; // keine gedrückte Taste gefunden
+    };
+    Game.prototype.start = function () {
+        if (this.tickHandle) {
+            return;
+        }
+        ;
+        var my = this;
+        var last = Date.now();
+        this.tickHandle = setInterval(function () {
+            var next = Date.now();
+            my.tick(next - last);
+            last = next;
+        }, 1);
+    };
+    /** führt eine oder mehrere Tick-Berechnungen durch
+     * @param count Anzahl der Tick-Berechnungen, welche durchgeführt werden sollen (1000 Ticks = 1 Sekunde)
+     */
+    Game.prototype.tick = function (count) {
+        if (count <= 0) {
+            return;
+        }
+        // --- gedrückte Tasten abfragen ---
+        this.keyLeft = Game.isPressed(this.keys.left) && this.keyLeft === 0 ? 1 : 0;
+        this.keyRight = Game.isPressed(this.keys.right) && this.keyRight === 0 ? 1 : 0;
+        this.keyDown = Game.isPressed(this.keys.down) && this.keyDown === 0 ? 1 : 0;
+        var rCw = Game.isPressed(this.keys.clockwise);
+        var rCc = Game.isPressed(this.keys.counterclockwise);
+        if (rCw !== rCc) {
+            if (!this.keyRotate) {
+                this.keyRotate = true;
+            }
+        }
+        else {
+            this.keyRotate = false;
+        }
+        while (count > 0) {
+            if (this.keyLeft > 0) {
+                // todo: move box left
+                this.keyLeft++;
+            }
+            if (this.keyRight > 0) {
+                // todo: move box right
+                this.keyRight++;
+            }
+            if (this.keyDown > 0) {
+                // todo: move box down
+                this.keyDown++;
+            }
+            else {
+            }
+            this.ticks++;
+            count--;
+        }
+        this.field.view();
+        document.title = "Ticks: " + this.ticks;
+    };
+    return Game;
+})();
 window.onload = function () {
+    document.body.onkeydown = function (e) {
+        keys[e.keyCode] = true;
+        document.title = "pressed key: " + e.keyCode;
+    };
+    document.body.onkeyup = function (e) {
+        keys[e.keyCode] = false;
+    };
     var div = document.getElementById("game");
     if (div) {
-        field = new Field(div, 10, 16, 1000, 600);
-        for (var i = 0; i < 9; i++) {
-            field.cells[i + 15 * 10].data = 2 /* Pushed */;
-        }
-        field.setBox(0, 13, boxes[0]);
-        field.setBox(6, 14, boxes[1]);
-        field.setBox(3, 14, boxes[2].rotLeft.rotLeft);
-        field.setBox(4, 12, boxes[3]);
-        field.setBox(1, 12, boxes[4].rotLeft);
-        field.setBox(7, 13, boxes[5].rotLeft.rotLeft);
-        field.setBox(0, 11, boxes[6].rotLeft);
-        field.setBox(9, 8, boxes[1].rotLeft);
-        field.view();
+        game = new Game(div, 10, 16, 1000, 600);
+        game.start();
         console.log("init: ok");
     }
     else {

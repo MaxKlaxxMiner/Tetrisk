@@ -7,7 +7,7 @@ enum CellType
   /** Leere Zelle (schwarz) */
   Empty,
 
-  /** Weißes aufblinken */
+  /** Weißes aufblinken (z.B. wenn eine Zeile entfernt wird) */
   Blink,
 
   /** hochgeschobenes Feld (vom Gegner) */
@@ -156,7 +156,7 @@ class Field
     {
       var cx = x + bc[i].x;
       var cy = y + bc[i].y;
-      if (cy < 0) continue;
+      if (cy < 0) { continue; } // Zelle oben außerhalb des Spielfeldes -> ignorieren
       this.cells[cx + cy * this.width].data = box.cellType;
     }
   }
@@ -166,7 +166,7 @@ class Field
    * @param y Y-Position der Box
    * @param box Box, welche entfernt werden soll
    */
-  delBox(x: number, y: number, box: Box): void
+  removeBox(x: number, y: number, box: Box): void
   {
     x += box.ofsX;
     y += box.ofsY;
@@ -175,7 +175,7 @@ class Field
     {
       var cx = x + bc[i].x;
       var cy = y + bc[i].y;
-      if (cy < 0) continue;
+      if (cy < 0) { continue; } // Zelle oben außerhalb des Spielfeldes -> ignorieren
       this.cells[cx + cy * this.width].data = CellType.Empty;
     }
   }
@@ -194,10 +194,10 @@ class Field
     {
       var cx = x + bc[i].x;
       var cy = y + bc[i].y;
-      if (cy < 0) continue;
-      if (cx < 0 || cx >= this.width || cy >= this.height) return false;
-      if (this.cells[cx + cy * this.width].data !== CellType.Empty) return false;
+      if (cy < 0) { continue; } // Zelle oben außerhalb des Spielfeldes -> kein Fehler
+      if (cx < 0 || cx >= this.width || cy >= this.height) { return false; } // links, rechts oder unten außerhalb des Spielfeldes -> Fehler
+      if (this.cells[cx + cy * this.width].data !== CellType.Empty) { return false; } // Zelle ist bereits belegt -> Fehler
     }
-    return true;
+    return true; // keine verbotenen Zellen gefunden -> OK
   }
 }
