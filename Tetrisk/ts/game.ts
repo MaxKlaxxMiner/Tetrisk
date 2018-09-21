@@ -32,8 +32,13 @@ class Game
   /** merkt sich die Anzahl der Ticks, welche bereits verarbeitet wurden */
   private ticks = 0;
   /** merkt sich das aktuelle Tick-Handle */
-
   private tickHandle;
+
+  /** Tickrate für gedrückte Taste für links/rechts */
+  static tickMove = 90;
+  /** Tickrate für gedrückte Taste nach unten */
+  static tickRapid = 45;
+
   /** aktueller Stein, welcher momentan gesteuert wird */
   private currentBox: Box;
   /** X-Position des aktuellen Steins */
@@ -110,7 +115,10 @@ class Game
   {
     for (var i = 0; i < checkCodes.length; i++)
     {
-      if (keys[checkCodes[i]]) return true; // einer der Tasten wurde gedrückt
+      if (keys[checkCodes[i]])
+      {
+        return true;  // einer der Tasten wurde gedrückt
+      }
     }
     return false; // keine gedrückte Taste gefunden
   }
@@ -163,8 +171,8 @@ class Game
     mx += this.currentX;
     my += this.currentY;
     var box = this.currentBox;
-    if (rot < 0) box = box.rotLeft;
-    if (rot > 0) box = box.rotRight;
+    if (rot < 0) { box = box.rotLeft; }
+    if (rot > 0) { box = box.rotRight; }
 
     var canMove = this.field.checkBox(mx, my, box);
     if (canMove)
@@ -210,7 +218,7 @@ class Game
     {
       if (this.keyLeft > 0)
       {
-        if (this.keyLeft === 1)
+        if (this.keyLeft % Game.tickMove === 1)
         {
           this.moveBox(-1, 0, 0);
         }
@@ -219,7 +227,7 @@ class Game
 
       if (this.keyRight > 0)
       {
-        if (this.keyRight === 1)
+        if (this.keyRight % Game.tickMove === 1)
         {
           this.moveBox(+1, 0, 0);
         }
@@ -228,13 +236,34 @@ class Game
 
       if (this.keyDown > 0)
       {
-        if (this.keyDown === 1)
+        if (this.keyDown % Game.tickRapid === 1)
         {
           if (!this.moveBox(0, +1, 0))
           {
+            var scan = this.field.scanLines();
+            if (scan.length)
+            {
+              var w = this.field.width;
+              var c = this.field.cells;
+              for (var i = 0; i < scan.length; i++)
+              {
+                for (var y = scan[i] * w; y > 0; y -= w)
+                {
+                  for (var x = 0; x < w; x++)
+                  {
+                    c[x + y].data = c[x + y - w].data;
+                  }
+                }
+                for (var x = 0; x < w; x++)
+                {
+                  c[x].data = CellType.Empty;
+                }
+              }
+            }
+
             if (!this.getNextBox())
             {
-              alert("died!");
+              return;
             }
           }
         }

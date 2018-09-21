@@ -156,6 +156,23 @@ var Field = (function () {
         }
         return true; // keine verbotenen Zellen gefunden -> OK
     };
+    /** scannt nach vollständigen Zeilen und gibt diese zurück (sofern welche vorhanden) */
+    Field.prototype.scanLines = function () {
+        var foundLines = [];
+        for (var line = 0; line < this.height; line++) {
+            var cells = 0;
+            for (var col = 0; col < this.width; col++) {
+                if (this.cells[col + line * this.width].data === 0 /* Empty */) {
+                    break;
+                }
+                cells++;
+            }
+            if (cells === this.width) {
+                foundLines.push(line);
+            }
+        }
+        return foundLines;
+    };
     return Field;
 })();
 //# sourceMappingURL=field.js.map

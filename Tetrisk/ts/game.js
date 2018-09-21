@@ -63,8 +63,9 @@ var Game = (function () {
      */
     Game.isPressed = function (checkCodes) {
         for (var i = 0; i < checkCodes.length; i++) {
-            if (keys[checkCodes[i]])
+            if (keys[checkCodes[i]]) {
                 return true; // einer der Tasten wurde gedrückt
+            }
         }
         return false; // keine gedrückte Taste gefunden
     };
@@ -107,10 +108,12 @@ var Game = (function () {
         mx += this.currentX;
         my += this.currentY;
         var box = this.currentBox;
-        if (rot < 0)
+        if (rot < 0) {
             box = box.rotLeft;
-        if (rot > 0)
+        }
+        if (rot > 0) {
             box = box.rotRight;
+        }
         var canMove = this.field.checkBox(mx, my, box);
         if (canMove) {
             this.currentX = mx;
@@ -144,22 +147,37 @@ var Game = (function () {
         }
         while (count > 0) {
             if (this.keyLeft > 0) {
-                if (this.keyLeft === 1) {
+                if (this.keyLeft % Game.tickMove === 1) {
                     this.moveBox(-1, 0, 0);
                 }
                 this.keyLeft++;
             }
             if (this.keyRight > 0) {
-                if (this.keyRight === 1) {
+                if (this.keyRight % Game.tickMove === 1) {
                     this.moveBox(+1, 0, 0);
                 }
                 this.keyRight++;
             }
             if (this.keyDown > 0) {
-                if (this.keyDown === 1) {
+                if (this.keyDown % Game.tickRapid === 1) {
                     if (!this.moveBox(0, +1, 0)) {
+                        var scan = this.field.scanLines();
+                        if (scan.length) {
+                            var w = this.field.width;
+                            var c = this.field.cells;
+                            for (var i = 0; i < scan.length; i++) {
+                                for (var y = scan[i] * w; y > 0; y -= w) {
+                                    for (var x = 0; x < w; x++) {
+                                        c[x + y].data = c[x + y - w].data;
+                                    }
+                                }
+                                for (var x = 0; x < w; x++) {
+                                    c[x].data = 0 /* Empty */;
+                                }
+                            }
+                        }
                         if (!this.getNextBox()) {
-                            alert("died!");
+                            return;
                         }
                     }
                 }
@@ -172,6 +190,10 @@ var Game = (function () {
         }
         this.field.view();
     };
+    /** Tickrate für gedrückte Taste für links/rechts */
+    Game.tickMove = 90;
+    /** Tickrate für gedrückte Taste nach unten */
+    Game.tickRapid = 45;
     return Game;
 })();
 window.onload = function () {
