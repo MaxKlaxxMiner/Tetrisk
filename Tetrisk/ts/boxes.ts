@@ -84,7 +84,7 @@ var boxes = (() =>
   b1 = new Box(CellType.Zel, -1, 0,
     "##\n" +
     " ##");
-  b2 = new Box(CellType.Zel, 0, -1,
+  b2 = new Box(CellType.Zel, 0, 0,
     " #\n" +
     "##\n" +
     "#");
@@ -96,7 +96,7 @@ var boxes = (() =>
   b1 = new Box(CellType.Sel, -1, 0,
     " ##\n" +
     "##");
-  b2 = new Box(CellType.Sel, 0, -1,
+  b2 = new Box(CellType.Sel, 0, 0,
     "#\n" +
     "##\n" +
     " #");

@@ -54,13 +54,13 @@ var boxes = (function () {
     bx.push(b1);
     // --- Z-Element ---
     b1 = new Box(6 /* Zel */, -1, 0, "##\n" + " ##");
-    b2 = new Box(6 /* Zel */, 0, -1, " #\n" + "##\n" + "#");
+    b2 = new Box(6 /* Zel */, 0, 0, " #\n" + "##\n" + "#");
     b1.rotLeft = b1.rotRight = b2;
     b2.rotLeft = b2.rotRight = b1;
     bx.push(b1);
     // --- S-Element ---
     b1 = new Box(7 /* Sel */, -1, 0, " ##\n" + "##");
-    b2 = new Box(7 /* Sel */, 0, -1, "#\n" + "##\n" + " #");
+    b2 = new Box(7 /* Sel */, 0, 0, "#\n" + "##\n" + " #");
     b1.rotLeft = b1.rotRight = b2;
     b2.rotLeft = b2.rotRight = b1;
     bx.push(b1);

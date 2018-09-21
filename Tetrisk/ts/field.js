@@ -144,12 +144,12 @@ var Field = (function () {
         for (var i = 0; i < bc.length; i++) {
             var cx = x + bc[i].x;
             var cy = y + bc[i].y;
-            if (cy < 0) {
-                continue;
-            } // Zelle oben außerhalb des Spielfeldes -> kein Fehler
             if (cx < 0 || cx >= this.width || cy >= this.height) {
                 return false;
             } // links, rechts oder unten außerhalb des Spielfeldes -> Fehler
+            if (cy < 0) {
+                continue;
+            } // Zelle oben außerhalb des Spielfeldes -> kein Fehler
             if (this.cells[cx + cy * this.width].data !== 0 /* Empty */) {
                 return false;
             } // Zelle ist bereits belegt -> Fehler
