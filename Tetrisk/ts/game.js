@@ -24,7 +24,7 @@ var Game = (function () {
             37,
             100
         ], [
-            67,
+            68,
             39,
             102
         ], [
@@ -68,11 +68,17 @@ var Game = (function () {
         }
         return false; // keine gedrückte Taste gefunden
     };
+    /** initialisiert und startet das Spiel */
     Game.prototype.start = function () {
         if (this.tickHandle) {
             return;
         }
         ;
+        this.currentBox = boxes[5];
+        this.currentX = Math.floor(this.field.width / 2 - .5);
+        this.currentY = 0;
+        this.nextBox = boxes[Math.floor(Math.random() * boxes.length)];
+        this.field.setBox(this.currentX, this.currentY, this.currentBox);
         var my = this;
         var last = Date.now();
         this.tickHandle = setInterval(function () {
@@ -80,6 +86,39 @@ var Game = (function () {
             my.tick(next - last);
             last = next;
         }, 1);
+    };
+    /** wechselt zum nächsten Stein und prüft, ob das Spiel weitergeführt werden kann */
+    Game.prototype.getNextBox = function () {
+        this.currentBox = this.nextBox;
+        this.currentX = Math.floor(this.field.width / 2 - .5);
+        this.currentY = 0;
+        var alive = this.field.checkBox(this.currentX, this.currentY, this.currentBox);
+        this.nextBox = boxes[Math.floor(Math.random() * boxes.length)];
+        this.field.setBox(this.currentX, this.currentY, this.currentBox);
+        return alive;
+    };
+    /** bewegt den aktuellen Stein und gibt zurück, ob dies möglich war
+     * @param mx Offset X-Position (-1 = links, 0 = nichts, +1 = rechts)
+     * @param my Offset Y-Position (0 = nichts, +1 = unten)
+     * @param rot Drehrichtung (-1 = links drehen, 0 = nicht drehen, +1 = rechts drehen)
+     */
+    Game.prototype.moveBox = function (mx, my, rot) {
+        this.field.removeBox(this.currentX, this.currentY, this.currentBox);
+        mx += this.currentX;
+        my += this.currentY;
+        var box = this.currentBox;
+        if (rot < 0)
+            box = box.rotLeft;
+        if (rot > 0)
+            box = box.rotRight;
+        var canMove = this.field.checkBox(mx, my, box);
+        if (canMove) {
+            this.currentX = mx;
+            this.currentY = my;
+            this.currentBox = box;
+        }
+        this.field.setBox(this.currentX, this.currentY, this.currentBox);
+        return canMove;
     };
     /** führt eine oder mehrere Tick-Berechnungen durch
      * @param count Anzahl der Tick-Berechnungen, welche durchgeführt werden sollen (1000 Ticks = 1 Sekunde)
@@ -89,14 +128,15 @@ var Game = (function () {
             return;
         }
         // --- gedrückte Tasten abfragen ---
-        this.keyLeft = Game.isPressed(this.keys.left) && this.keyLeft === 0 ? 1 : 0;
-        this.keyRight = Game.isPressed(this.keys.right) && this.keyRight === 0 ? 1 : 0;
-        this.keyDown = Game.isPressed(this.keys.down) && this.keyDown === 0 ? 1 : 0;
+        this.keyLeft = Game.isPressed(this.keys.left) ? (this.keyLeft === 0 ? 1 : this.keyLeft) : 0;
+        this.keyRight = Game.isPressed(this.keys.right) ? (this.keyRight === 0 ? 1 : this.keyRight) : 0;
+        this.keyDown = Game.isPressed(this.keys.down) ? (this.keyDown === 0 ? 1 : this.keyDown) : 0;
         var rCw = Game.isPressed(this.keys.clockwise);
         var rCc = Game.isPressed(this.keys.counterclockwise);
         if (rCw !== rCc) {
             if (!this.keyRotate) {
                 this.keyRotate = true;
+                this.moveBox(0, 0, rCw ? +1 : -1);
             }
         }
         else {
@@ -104,15 +144,25 @@ var Game = (function () {
         }
         while (count > 0) {
             if (this.keyLeft > 0) {
-                // todo: move box left
+                if (this.keyLeft === 1) {
+                    this.moveBox(-1, 0, 0);
+                }
                 this.keyLeft++;
             }
             if (this.keyRight > 0) {
-                // todo: move box right
+                if (this.keyRight === 1) {
+                    this.moveBox(+1, 0, 0);
+                }
                 this.keyRight++;
             }
             if (this.keyDown > 0) {
-                // todo: move box down
+                if (this.keyDown === 1) {
+                    if (!this.moveBox(0, +1, 0)) {
+                        if (!this.getNextBox()) {
+                            alert("died!");
+                        }
+                    }
+                }
                 this.keyDown++;
             }
             else {
@@ -121,14 +171,12 @@ var Game = (function () {
             count--;
         }
         this.field.view();
-        document.title = "Ticks: " + this.ticks;
     };
     return Game;
 })();
 window.onload = function () {
     document.body.onkeydown = function (e) {
         keys[e.keyCode] = true;
-        document.title = "pressed key: " + e.keyCode;
     };
     document.body.onkeyup = function (e) {
         keys[e.keyCode] = false;

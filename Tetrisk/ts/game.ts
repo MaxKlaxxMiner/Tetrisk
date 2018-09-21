@@ -32,7 +32,16 @@ class Game
   /** merkt sich die Anzahl der Ticks, welche bereits verarbeitet wurden */
   private ticks = 0;
   /** merkt sich das aktuelle Tick-Handle */
+
   private tickHandle;
+  /** aktueller Stein, welcher momentan gesteuert wird */
+  private currentBox: Box;
+  /** X-Position des aktuellen Steins */
+  private currentX: number;
+  /** Y-Position des aktuellen Steins */
+  private currentY: number;
+  /** Stein, welcher als nächstes dran ist */
+  private nextBox: Box;
 
   //#region // --- constructor ---
   constructor(parentDiv: HTMLElement, fieldWidth: number, fieldHeight: number, maxWidth: number, maxHeight: number)
@@ -50,7 +59,7 @@ class Game
       ],
       // rechts
       [
-        67, // D
+        68, // D
         39, // Right
         102 // Num 6
       ],
@@ -97,7 +106,7 @@ class Game
   /** prüft, ob eine dieser Tasten gedrückt wurde 
    * @param checkCodes Tastencodes, welche geprüft werden sollen
    */
-  static isPressed(checkCodes: number[]) : boolean
+  static isPressed(checkCodes: number[]): boolean
   {
     for (var i = 0; i < checkCodes.length; i++)
     {
@@ -106,9 +115,18 @@ class Game
     return false; // keine gedrückte Taste gefunden
   }
 
+  /** initialisiert und startet das Spiel */
   start(): void
   {
     if (this.tickHandle) { return; }; // todo: restart running process
+
+    this.currentBox = boxes[5];
+    this.currentX = Math.floor(this.field.width / 2 - .5);
+    this.currentY = 0;
+    this.nextBox = boxes[Math.floor(Math.random() * boxes.length)];
+
+    this.field.setBox(this.currentX, this.currentY, this.currentBox);
+
     var my = this;
     var last = Date.now();
     this.tickHandle = setInterval(() =>
@@ -119,6 +137,48 @@ class Game
     }, 1);
   }
 
+  /** wechselt zum nächsten Stein und prüft, ob das Spiel weitergeführt werden kann */
+  getNextBox(): boolean
+  {
+    this.currentBox = this.nextBox;
+    this.currentX = Math.floor(this.field.width / 2 - .5);
+    this.currentY = 0;
+    var alive = this.field.checkBox(this.currentX, this.currentY, this.currentBox);
+    this.nextBox = boxes[Math.floor(Math.random() * boxes.length)];
+
+    this.field.setBox(this.currentX, this.currentY, this.currentBox);
+
+    return alive;
+  }
+
+  /** bewegt den aktuellen Stein und gibt zurück, ob dies möglich war
+   * @param mx Offset X-Position (-1 = links, 0 = nichts, +1 = rechts)
+   * @param my Offset Y-Position (0 = nichts, +1 = unten)
+   * @param rot Drehrichtung (-1 = links drehen, 0 = nicht drehen, +1 = rechts drehen)
+   */
+  moveBox(mx: number, my: number, rot: number): boolean
+  {
+    this.field.removeBox(this.currentX, this.currentY, this.currentBox);
+
+    mx += this.currentX;
+    my += this.currentY;
+    var box = this.currentBox;
+    if (rot < 0) box = box.rotLeft;
+    if (rot > 0) box = box.rotRight;
+
+    var canMove = this.field.checkBox(mx, my, box);
+    if (canMove)
+    {
+      this.currentX = mx;
+      this.currentY = my;
+      this.currentBox = box;
+    }
+
+    this.field.setBox(this.currentX, this.currentY, this.currentBox);
+
+    return canMove;
+  }
+
   /** führt eine oder mehrere Tick-Berechnungen durch
    * @param count Anzahl der Tick-Berechnungen, welche durchgeführt werden sollen (1000 Ticks = 1 Sekunde)
    */
@@ -127,9 +187,9 @@ class Game
     if (count <= 0) { return; }
 
     // --- gedrückte Tasten abfragen ---
-    this.keyLeft = Game.isPressed(this.keys.left) && this.keyLeft === 0 ? 1 : 0;
-    this.keyRight = Game.isPressed(this.keys.right) && this.keyRight === 0 ? 1 : 0;
-    this.keyDown = Game.isPressed(this.keys.down) && this.keyDown === 0 ? 1 : 0;
+    this.keyLeft = Game.isPressed(this.keys.left) ? (this.keyLeft === 0 ? 1 : this.keyLeft) : 0;
+    this.keyRight = Game.isPressed(this.keys.right) ? (this.keyRight === 0 ? 1 : this.keyRight) : 0;
+    this.keyDown = Game.isPressed(this.keys.down) ? (this.keyDown === 0 ? 1 : this.keyDown) : 0;
     var rCw = Game.isPressed(this.keys.clockwise);
     var rCc = Game.isPressed(this.keys.counterclockwise);
     if (rCw !== rCc)
@@ -137,7 +197,7 @@ class Game
       if (!this.keyRotate)
       {
         this.keyRotate = true;
-        // todo: rotate box
+        this.moveBox(0, 0, rCw ? +1 : -1);
       }
     }
     else
@@ -150,19 +210,34 @@ class Game
     {
       if (this.keyLeft > 0)
       {
-        // todo: move box left
+        if (this.keyLeft === 1)
+        {
+          this.moveBox(-1, 0, 0);
+        }
         this.keyLeft++;
       }
 
       if (this.keyRight > 0)
       {
-        // todo: move box right
+        if (this.keyRight === 1)
+        {
+          this.moveBox(+1, 0, 0);
+        }
         this.keyRight++;
       }
 
       if (this.keyDown > 0)
       {
-        // todo: move box down
+        if (this.keyDown === 1)
+        {
+          if (!this.moveBox(0, +1, 0))
+          {
+            if (!this.getNextBox())
+            {
+              alert("died!");
+            }
+          }
+        }
         this.keyDown++;
       }
       else
@@ -175,8 +250,6 @@ class Game
     }
 
     this.field.view();
-
-    document.title = "Ticks: " + this.ticks;
   }
 }
 
@@ -185,7 +258,6 @@ window.onload = () =>
   document.body.onkeydown = (e: KeyboardEvent) =>
   {
     keys[e.keyCode] = true;
-    document.title = "pressed key: " + e.keyCode;
   };
   document.body.onkeyup = (e: KeyboardEvent) =>
   {
@@ -197,7 +269,7 @@ window.onload = () =>
   {
     game = new Game(div, 10, 16, 1000, 600);
     game.start();
-    
+
     console.log("init: ok");
   }
   else
