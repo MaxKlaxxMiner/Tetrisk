@@ -17,6 +17,18 @@ interface GameKeys
 
 class Game
 {
+  // --- Konstanten fürs Timing (müssen die gleichen wie in der .Net Umgebung sein, sonst könnte ein Cheat-Verdacht ausgeworfen werden) ---
+
+  /** Startwert, ab wann eine links/rechts Taste automatisch wiederholt wird */
+  static tickMoveStart = 180;
+  /** Wiederholrate für links/rechts Tasten (und gleichzeitiger Speed-Limiter) */
+  static tickMoveRepeat = 90;
+  /** Wiederholrate für gedrückte Taste nach unten (und gleichzeitiger Speed-Limiter) */
+  static tickDownRepeat = 60;
+  /** Wiederholrate für automatisches nach unten bewegen */
+  static tickDownTimeout = 600;
+
+  //#region // --- Variablen ---
   /** merkt sich das aktuelle Spielfeld */
   field: Field;
   /** merkt sich die aktuell eingestellten Tasten */
@@ -44,15 +56,6 @@ class Game
   /** merkt sich das aktuelle Tick-Handle */
   private tickHandle;
 
-  /** Startwert, ab wann eine links/rechts Taste automatisch wiederholt wird */
-  static tickMoveStart = 180;
-  /** Wiederholrate für links/rechts Taste (und gleichzeitiger Speed-Limiter) */
-  static tickMoveRepeat = 90;
-  /** Wiederholrate für gedrückte Taste nach unten (und gleichzeitiger Speed-Limiter) */
-  static tickDownRepeat = 60;
-  /** Wiederholrate für automatisches nach unten bewegen */
-  static tickDownTimeout = 600;
-
   /** aktueller Stein, welcher momentan gesteuert wird */
   private currentBox: Box;
   /** X-Position des aktuellen Steins */
@@ -61,8 +64,9 @@ class Game
   private currentY: number;
   /** Stein, welcher als nächstes dran ist */
   private nextBox: Box;
+  //#endregion
 
-  //#region // --- constructor ---
+  //#region // --- Konstruktor ---
   constructor(parentDiv: HTMLElement, fieldWidth: number, fieldHeight: number, maxWidth: number, maxHeight: number)
   {
     // --- Spielfeld initialisieren ---
@@ -103,6 +107,31 @@ class Game
   }
   //#endregion
 
+  //#region // --- Start ---
+  /** initialisiert und startet das Spiel */
+  start(): void
+  {
+    if (this.tickHandle) { return; }; // todo: restart running process
+
+    this.currentBox = boxes[5];
+    this.currentX = Math.floor(this.field.width / 2 - .5);
+    this.currentY = 0;
+    this.nextBox = boxes[Math.floor(Math.random() * boxes.length)];
+
+    this.field.setBox(this.currentX, this.currentY, this.currentBox);
+
+    var my = this;
+    var last = Date.now();
+    this.tickHandle = setInterval(() =>
+    {
+      var next = Date.now();
+      my.tick(next - last);
+      last = next;
+    }, 1);
+  }
+  //#endregion
+
+  //#region // --- Tasten-Hilfsmethoden ---
   /** ändert die Tastensteuerung 
    * @param left Tastcodes für Linksbewegung (null = um die vorherige Einstellung zu behalten)
    * @param right Tastencodes für Rechtsbewegung (null = um die vorherige Einstellung zu behalten)
@@ -136,29 +165,9 @@ class Game
     }
     return false; // keine gedrückte Taste gefunden
   }
+  //#endregion
 
-  /** initialisiert und startet das Spiel */
-  start(): void
-  {
-    if (this.tickHandle) { return; }; // todo: restart running process
-
-    this.currentBox = boxes[5];
-    this.currentX = Math.floor(this.field.width / 2 - .5);
-    this.currentY = 0;
-    this.nextBox = boxes[Math.floor(Math.random() * boxes.length)];
-
-    this.field.setBox(this.currentX, this.currentY, this.currentBox);
-
-    var my = this;
-    var last = Date.now();
-    this.tickHandle = setInterval(() =>
-    {
-      var next = Date.now();
-      my.tick(next - last);
-      last = next;
-    }, 1);
-  }
-
+  //#region // --- Steine-Hilfsmethoden ---
   /** wechselt zum nächsten Stein und prüft, ob das Spiel weitergeführt werden kann */
   getNextBox(): boolean
   {
@@ -200,7 +209,9 @@ class Game
 
     return canMove;
   }
+  //#endregion
 
+  //#region // --- Tick ---
   /** führt eine oder mehrere Tick-Berechnungen durch
    * @param count Anzahl der Tick-Berechnungen, welche durchgeführt werden sollen (1000 Ticks = 1 Sekunde)
    */
@@ -356,6 +367,7 @@ class Game
 
     this.field.view();
   }
+  //#endregion
 }
 
 window.onload = () =>

@@ -4,7 +4,8 @@
 var game;
 var keys = {};
 var Game = (function () {
-    //#region // --- constructor ---
+    //#endregion
+    //#region // --- Konstruktor ---
     function Game(parentDiv, fieldWidth, fieldHeight, maxWidth, maxHeight) {
         /** gibt an, ob und wie lange die Taste zum links-bewegen gedrückt wurde */
         this.keyLeft = 0;
@@ -52,6 +53,28 @@ var Game = (function () {
         ]);
     }
     //#endregion
+    //#region // --- Start ---
+    /** initialisiert und startet das Spiel */
+    Game.prototype.start = function () {
+        if (this.tickHandle) {
+            return;
+        }
+        ;
+        this.currentBox = boxes[5];
+        this.currentX = Math.floor(this.field.width / 2 - .5);
+        this.currentY = 0;
+        this.nextBox = boxes[Math.floor(Math.random() * boxes.length)];
+        this.field.setBox(this.currentX, this.currentY, this.currentBox);
+        var my = this;
+        var last = Date.now();
+        this.tickHandle = setInterval(function () {
+            var next = Date.now();
+            my.tick(next - last);
+            last = next;
+        }, 1);
+    };
+    //#endregion
+    //#region // --- Tasten-Hilfsmethoden ---
     /** ändert die Tastensteuerung
      * @param left Tastcodes für Linksbewegung (null = um die vorherige Einstellung zu behalten)
      * @param right Tastencodes für Rechtsbewegung (null = um die vorherige Einstellung zu behalten)
@@ -79,25 +102,8 @@ var Game = (function () {
         }
         return false; // keine gedrückte Taste gefunden
     };
-    /** initialisiert und startet das Spiel */
-    Game.prototype.start = function () {
-        if (this.tickHandle) {
-            return;
-        }
-        ;
-        this.currentBox = boxes[5];
-        this.currentX = Math.floor(this.field.width / 2 - .5);
-        this.currentY = 0;
-        this.nextBox = boxes[Math.floor(Math.random() * boxes.length)];
-        this.field.setBox(this.currentX, this.currentY, this.currentBox);
-        var my = this;
-        var last = Date.now();
-        this.tickHandle = setInterval(function () {
-            var next = Date.now();
-            my.tick(next - last);
-            last = next;
-        }, 1);
-    };
+    //#endregion
+    //#region // --- Steine-Hilfsmethoden ---
     /** wechselt zum nächsten Stein und prüft, ob das Spiel weitergeführt werden kann */
     Game.prototype.getNextBox = function () {
         this.currentBox = this.nextBox;
@@ -133,6 +139,8 @@ var Game = (function () {
         this.field.setBox(this.currentX, this.currentY, this.currentBox);
         return canMove;
     };
+    //#endregion
+    //#region // --- Tick ---
     /** führt eine oder mehrere Tick-Berechnungen durch
      * @param count Anzahl der Tick-Berechnungen, welche durchgeführt werden sollen (1000 Ticks = 1 Sekunde)
      */
@@ -247,9 +255,10 @@ var Game = (function () {
         }
         this.field.view();
     };
+    // --- Konstanten fürs Timing (müssen die gleichen wie in der .Net Umgebung sein, sonst könnte ein Cheat-Verdacht ausgeworfen werden) ---
     /** Startwert, ab wann eine links/rechts Taste automatisch wiederholt wird */
     Game.tickMoveStart = 180;
-    /** Wiederholrate für links/rechts Taste (und gleichzeitiger Speed-Limiter) */
+    /** Wiederholrate für links/rechts Tasten (und gleichzeitiger Speed-Limiter) */
     Game.tickMoveRepeat = 90;
     /** Wiederholrate für gedrückte Taste nach unten (und gleichzeitiger Speed-Limiter) */
     Game.tickDownRepeat = 60;
