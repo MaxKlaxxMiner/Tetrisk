@@ -6,16 +6,26 @@ var keys = {};
 var Game = (function () {
     //#region // --- constructor ---
     function Game(parentDiv, fieldWidth, fieldHeight, maxWidth, maxHeight) {
-        /** gibt an, ob und wie lange die Taste zum links-bewegen gedrükt wurde */
+        /** gibt an, ob und wie lange die Taste zum links-bewegen gedrückt wurde */
         this.keyLeft = 0;
         /** gibt an, ob und wie lange die Taste zum rechts-bewegen gedrückt wurde */
         this.keyRight = 0;
+        /** gibt an, wie lange noch gewartet werden muss, bis die nächste links/rechts Taste gedrückt werden darf */
+        this.keyMoveWait = 0;
+        /** gibt an, in welcher Richtung das nächste mal der Stein bewegt werden soll (falls die Richtungstasten zu schnell hintereinander gedrückt wurden) */
+        this.keyMoveNext = 0;
         /** gibt an, ob und wie lange die Taste zum nachunten-bewegen gedrückt wurde */
         this.keyDown = 0;
         /** gibt an, ob eine Taste zum drehen gedrückt wurde */
         this.keyRotate = false;
+        /** gibt an, wie lange noch gewartet werden muss, bis das nächste mal der Stein gedreht werden darf */
+        this.keyRotateWait = 0;
+        /** gibt an, in welcher Richtung das nächste mal der Stein gedreht werden soll (falls die Drehtasten zu schnell hintereinander gedrückt wurden) */
+        this.keyRotateNext = 0;
         /** merkt sich die Anzahl der Ticks, welche bereits verarbeitet wurden */
         this.ticks = 0;
+        /** merkt sich, wann der Stein das letzte mal nach unten bewegt wurde */
+        this.ticksLastDown = 0;
         // --- Spielfeld initialisieren ---
         this.field = new Field(parentDiv, fieldWidth, fieldHeight, maxWidth, maxHeight);
         // --- Standard-Tastencodes setzen ---
@@ -103,7 +113,7 @@ var Game = (function () {
      * @param my Offset Y-Position (0 = nichts, +1 = unten)
      * @param rot Drehrichtung (-1 = links drehen, 0 = nicht drehen, +1 = rechts drehen)
      */
-    Game.prototype.moveBox = function (mx, my, rot) {
+    Game.prototype.moveBox = function (mx, my, rot, onlyCheck) {
         this.field.removeBox(this.currentX, this.currentY, this.currentBox);
         mx += this.currentX;
         my += this.currentY;
@@ -115,7 +125,7 @@ var Game = (function () {
             box = box.rotRight;
         }
         var canMove = this.field.checkBox(mx, my, box);
-        if (canMove) {
+        if (canMove && !onlyCheck) {
             this.currentX = mx;
             this.currentY = my;
             this.currentBox = box;
@@ -130,70 +140,121 @@ var Game = (function () {
         if (count <= 0) {
             return;
         }
-        // --- gedrückte Tasten abfragen ---
-        this.keyLeft = Game.isPressed(this.keys.left) ? (this.keyLeft === 0 ? 1 : this.keyLeft) : 0;
-        this.keyRight = Game.isPressed(this.keys.right) ? (this.keyRight === 0 ? 1 : this.keyRight) : 0;
-        this.keyDown = Game.isPressed(this.keys.down) ? (this.keyDown === 0 ? 1 : this.keyDown) : 0;
+        var pressLeft = Game.isPressed(this.keys.left);
+        var pressRight = Game.isPressed(this.keys.right);
+        var pressDown = Game.isPressed(this.keys.down);
         var rCw = Game.isPressed(this.keys.clockwise);
         var rCc = Game.isPressed(this.keys.counterclockwise);
         if (rCw !== rCc) {
             if (!this.keyRotate) {
                 this.keyRotate = true;
-                this.moveBox(0, 0, rCw ? +1 : -1);
+                this.keyRotateNext += rCw ? +1 : -1;
+                if (this.keyRotateNext < -2)
+                    this.keyRotateNext += 4;
+                if (this.keyRotateNext > +2)
+                    this.keyRotateNext -= 4;
             }
         }
         else {
             this.keyRotate = false;
         }
         while (count > 0) {
-            if (this.keyLeft > 0) {
-                if (this.keyLeft % Game.tickMove === 1) {
-                    this.moveBox(-1, 0, 0);
-                }
-                this.keyLeft++;
+            // --- gedrückte Tasten berechnen ---
+            this.keyLeft = pressLeft ? this.keyLeft + 1 : 0;
+            this.keyRight = pressRight ? this.keyRight + 1 : 0;
+            this.keyDown = pressDown ? this.keyDown + 1 : 0;
+            if (this.keyLeft === 1 || this.keyRight === 0 && this.keyMoveNext >= 0 && this.keyLeft > Game.tickMoveStart && (this.keyLeft - Game.tickMoveStart) % Game.tickMoveRepeat === 1) {
+                if (this.moveBox(this.keyMoveNext - 1, 0, 0, true))
+                    this.keyMoveNext--;
             }
-            if (this.keyRight > 0) {
-                if (this.keyRight % Game.tickMove === 1) {
-                    this.moveBox(+1, 0, 0);
-                }
-                this.keyRight++;
+            if (this.keyRight === 1 || this.keyLeft === 0 && this.keyMoveNext <= 0 && this.keyRight > Game.tickMoveStart && (this.keyRight - Game.tickMoveStart) % Game.tickMoveRepeat === 1) {
+                if (this.moveBox(this.keyMoveNext + 1, 0, 0, true))
+                    this.keyMoveNext++;
             }
-            if (this.keyDown > 0) {
-                if (this.keyDown % Game.tickRapid === 1) {
-                    if (!this.moveBox(0, +1, 0)) {
-                        var scan = this.field.scanLines();
-                        if (scan.length) {
-                            var w = this.field.width;
-                            var c = this.field.cells;
-                            for (var i = 0; i < scan.length; i++) {
-                                for (var y = scan[i] * w; y > 0; y -= w) {
-                                    for (var x = 0; x < w; x++) {
-                                        c[x + y].data = c[x + y - w].data;
-                                    }
-                                }
-                                for (var x = 0; x < w; x++) {
-                                    c[x].data = 0 /* Empty */;
-                                }
-                            }
+            // --- Drehung ausführen ---
+            if (this.keyRotateWait === 0) {
+                if (this.keyRotateNext !== 0) {
+                    if (this.keyRotateNext < 0) {
+                        this.keyRotateNext++;
+                        if (this.moveBox(0, 0, -1)) {
+                            this.keyRotateWait = Game.tickMoveRepeat; // Limiter setzen
                         }
-                        if (!this.getNextBox()) {
-                            return;
+                    }
+                    else {
+                        this.keyRotateNext--;
+                        if (this.moveBox(0, 0, +1)) {
+                            this.keyRotateWait = Game.tickMoveRepeat; // Limiter setzen
                         }
                     }
                 }
-                this.keyDown++;
             }
             else {
+                this.keyRotateWait--;
+            }
+            // --- links/rechts Bewegungen ausführen ---
+            if (this.keyMoveWait === 0) {
+                while (this.keyMoveNext !== 0) {
+                    if (this.keyMoveNext < 0) {
+                        this.keyMoveNext++;
+                        if (this.moveBox(-1, 0, 0)) {
+                            this.keyMoveWait = Game.tickMoveRepeat; // Limiter setzen und
+                            break;
+                        }
+                    }
+                    else {
+                        this.keyMoveNext--;
+                        if (this.moveBox(+1, 0, 0)) {
+                            this.keyMoveWait = Game.tickMoveRepeat; // Limiter setzen und
+                            break;
+                        }
+                    }
+                }
+            }
+            else {
+                this.keyMoveWait--;
+            }
+            // --- nach unten Bewegung ausführen ---
+            if (this.keyDown > 0 ? this.ticksLastDown >= Game.tickDownRepeat : this.ticksLastDown >= Game.tickDownTimeout) {
+                this.ticksLastDown = 0;
+                if (!this.moveBox(0, +1, 0)) {
+                    var scan = this.field.scanLines();
+                    if (scan.length) {
+                        var w = this.field.width;
+                        var c = this.field.cells;
+                        for (var i = 0; i < scan.length; i++) {
+                            for (var y = scan[i] * w; y > 0; y -= w) {
+                                for (var x = 0; x < w; x++) {
+                                    c[x + y].data = c[x + y - w].data;
+                                }
+                            }
+                            for (var l = 0; l < w; l++) {
+                                c[l].data = 0 /* Empty */;
+                            }
+                        }
+                    }
+                    if (!this.getNextBox()) {
+                        // todo: Spieler hat verloren
+                        return;
+                    }
+                    this.keyDown = Game.tickMoveStart * -2; // bereits gedrückte unten-Taste für eine kurze Zeit blocken, damit der nachfolgenden Stein nicht sofort losrennt
+                }
+            }
+            else {
+                this.ticksLastDown++;
             }
             this.ticks++;
             count--;
         }
         this.field.view();
     };
-    /** Tickrate für gedrückte Taste für links/rechts */
-    Game.tickMove = 90;
-    /** Tickrate für gedrückte Taste nach unten */
-    Game.tickRapid = 45;
+    /** Startwert, ab wann eine links/rechts Taste automatisch wiederholt wird */
+    Game.tickMoveStart = 180;
+    /** Wiederholrate für links/rechts Taste (und gleichzeitiger Speed-Limiter) */
+    Game.tickMoveRepeat = 90;
+    /** Wiederholrate für gedrückte Taste nach unten (und gleichzeitiger Speed-Limiter) */
+    Game.tickDownRepeat = 60;
+    /** Wiederholrate für automatisches nach unten bewegen */
+    Game.tickDownTimeout = 600;
     return Game;
 })();
 window.onload = function () {
