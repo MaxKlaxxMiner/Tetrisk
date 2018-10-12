@@ -1,6 +1,12 @@
 ﻿h1
 {
   font-family: arial;
+  color: #ccc;
+}
+
+body
+{
+  background: #222;
 }
 
 /* gamefield default styles */
@@ -12,10 +18,21 @@ table.game, .game td
   padding: 0;
 }
 
+/* cell default style */
+.game td
+{
+  -moz-box-shadow: inset 4px 4px 4px rgba(255, 255, 255, .05), inset -4px -4px 4px rgba(0, 0, 0, .05);
+  -webkit-box-shadow: inset 4px 4px 4px rgba(255, 255, 255, .05), inset -4px -4px 4px rgba(0, 0, 0, .05);
+  box-shadow: inset 4px 4px 4px rgba(255, 255, 255, .05), inset -4px -4px 4px rgba(0, 0, 0, .05);
+}
+
 /* black cell (empty) */
 .game td.e
 {
   background: #333;
+  -moz-box-shadow: none;
+  -webkit-box-shadow: none;
+  box-shadow: none;
 }
 
 /* white cell (blinking) */

@@ -60,11 +60,8 @@ var Game = (function () {
             return;
         }
         ;
-        this.currentBox = boxes[5];
-        this.currentX = Math.floor(this.field.width / 2 - .5);
-        this.currentY = 0;
         this.nextBox = boxes[Math.floor(Math.random() * boxes.length)];
-        this.field.setBox(this.currentX, this.currentY, this.currentBox);
+        this.getNextBox();
         var my = this;
         var last = Date.now();
         this.tickHandle = setInterval(function () {
@@ -111,6 +108,7 @@ var Game = (function () {
         this.currentY = 0;
         var alive = this.field.checkBox(this.currentX, this.currentY, this.currentBox);
         this.nextBox = boxes[Math.floor(Math.random() * boxes.length)];
+        this.field.previewBox(this.nextBox);
         this.field.setBox(this.currentX, this.currentY, this.currentBox);
         return alive;
     };
@@ -244,7 +242,7 @@ var Game = (function () {
                         // todo: Spieler hat verloren
                         return;
                     }
-                    this.keyDown = Game.tickMoveStart * -2; // bereits gedrückte unten-Taste für eine kurze Zeit blocken, damit der nachfolgenden Stein nicht sofort losrennt
+                    this.keyDown = -Game.tickMoveStart; // bereits gedrückte unten-Taste für eine kurze Zeit blocken, damit der nachfolgenden Stein nicht sofort losrennt
                 }
             }
             else {

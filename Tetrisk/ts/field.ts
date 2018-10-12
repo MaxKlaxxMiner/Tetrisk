@@ -80,8 +80,11 @@ class Field
   /** Höhe des Spielfeldes in Zellen (Standard: 16) */
   height: number;
 
-  /** gespeicherte Zellen (Standard: 10 * 16 Elemente) */
+  /** gespeicherte Zellen (Standard: 10 x 16 Elemente) */
   cells: Cell[];
+
+  /** gespeicherte Zellen für die Vorschau (4 x 4 Elemente) */
+  previewCells: Cell[];
 
   //#region // --- constructor ---
   constructor(parentDiv: HTMLElement, fieldWidth: number, fieldHeight: number, maxWidth: number, maxHeight: number)
@@ -89,6 +92,7 @@ class Field
     this.width = fieldWidth;
     this.height = fieldHeight;
     this.cells = [];
+    this.previewCells = [];
 
     // --- maximale Größe einer Zelle berechnen ---
     maxWidth -= fieldWidth + 1;
@@ -100,16 +104,17 @@ class Field
     }
     cellSize--;
 
-    // --- Tabelle als DOM-Struktur erzeugen ---
-    var tab = document.createElement("TABLE");
-    tab.classList.add("game");
-    for (var y = 0; y < fieldHeight; y++)
+    // --- Tabelle des Spielfeldes erzeugen (Default: 10 x 16)---
+    var x: number, y: number, row: HTMLElement, cell: HTMLElement;
+    var fieldTab = document.createElement("TABLE");
+    fieldTab.classList.add("game");
+    for (y = 0; y < fieldHeight; y++)
     {
-      var row = document.createElement("TR");
+      row = document.createElement("TR");
       row.style.height = cellSize + "px";
-      for (var x = 0; x < fieldWidth; x++)
+      for (x = 0; x < fieldWidth; x++)
       {
-        var cell = document.createElement("TD");
+        cell = document.createElement("TD");
         cell.style.width = cellSize + "px";
         cell.style.height = cellSize + "px";
         cell.className = (<any>CellType).classNames[CellType.Empty];
@@ -121,19 +126,68 @@ class Field
           data: CellType.Empty
         });
       }
-      tab.appendChild(row);
+      fieldTab.appendChild(row);
     }
-    parentDiv.appendChild(tab);
+
+    // --- Tabelle mit der Spielvorschau erzeugen (4 x 4) ---
+    var previewTab = document.createElement("TABLE");
+    previewTab.classList.add("game");
+    for (y = 0; y < 4; y++)
+    {
+      row = document.createElement("TR");
+      row.style.height = cellSize + "px";
+      for (x = 0; x < 4; x++)
+      {
+        cell = document.createElement("TD");
+        cell.style.width = cellSize + "px";
+        cell.style.height = cellSize + "px";
+        cell.className = (<any>CellType).classNames[CellType.Empty];
+        row.appendChild(cell);
+
+        this.previewCells.push({
+          ref: cell,
+          view: CellType.Empty,
+          data: CellType.Empty
+        });
+      }
+      previewTab.appendChild(row);
+    }
+
+    // --- Haupt-Tabelle mit links/rechts Trennung erzeugen ---
+    var mainRow = document.createElement("TR");
+    var leftCell = document.createElement("TD");
+    var rightCell = document.createElement("TD");
+
+    leftCell.appendChild(fieldTab);
+    rightCell.style.verticalAlign = "top";
+    rightCell.style.padding = (cellSize + 1) * 3 + "px 0 0 " + Math.ceil(cellSize / 2) + "px";
+    rightCell.appendChild(previewTab);
+
+    mainRow.appendChild(leftCell);
+    mainRow.appendChild(rightCell);
+
+    parentDiv.appendChild(document.createElement("TABLE").appendChild(mainRow));
   }
   //#endregion
 
   /** aktualisert die Farben auf dem Spielfeld (sofern notwendig) */
-  view() : void
+  view(): void
   {
+    var i: number, cell: Cell;
     var cells = this.cells;
-    for (var i = 0; i < cells.length; i++)
+    for (i = 0; i < cells.length; i++)
     {
-      var cell = cells[i];
+      cell = cells[i];
+      if (cell.view !== cell.data)
+      {
+        cell.ref.className = (<any>CellType).classNames[cell.data];
+        cell.view = cell.data;
+      }
+    }
+    cells = this.previewCells;
+    for (i = 0; i < cells.length; i++)
+    {
+      cell = cells[i];
       if (cell.view !== cell.data)
       {
         cell.ref.className = (<any>CellType).classNames[cell.data];
@@ -142,12 +196,50 @@ class Field
     }
   }
 
-  /** setzt eine Box in das Spielfeld (ohne Bereichsprüfung)
-   * @param x X-Position der Box
-   * @param y Y-Position der Box
-   * @param box Box, welche gesetzt werden soll
+  /**
+   * zeigt eine bestimmten Stein in der Vorschau
+   * @param box Stein, welcher gezeigt werden soll
    */
-  setBox(x: number, y: number, box: Box) : void
+  previewBox(box: Box): void
+  {
+    var i: number;
+    var bc = box.cells;
+
+    // --- Position und Größe des Steins ermitteln ---
+    var minX = 4, maxX = 0, minY = 4, maxY = 0;
+    for (i = 0; i < bc.length; i++)
+    {
+      var px = bc[i].x;
+      var py = bc[i].y;
+      if (px < minX) minX = px;
+      if (px > maxX) maxX = px;
+      if (py < minY) minY = py;
+      if (py > maxY) maxY = py;
+    }
+
+    // --- alle alten Felder löschen ---
+    for (i = 0; i < this.previewCells.length; i++)
+    {
+      this.previewCells[i].data = CellType.Empty;
+    }
+
+    // --- optimale Position berechnen und den neuen Stein zeichnen ---
+    var x = 2 - Math.floor((maxX - minX + 2) / 2);
+    var y = 2 - Math.floor((maxY - minY + 2) / 2);
+    for (i = 0; i < bc.length; i++)
+    {
+      var cx = x + bc[i].x;
+      var cy = y + bc[i].y;
+      this.previewCells[cx + cy * 4].data = box.cellType;
+    }
+  }
+
+  /** setzt einen Stein in das Spielfeld (ohne Bereichsprüfung)
+   * @param x X-Position des Steins
+   * @param y Y-Position des Steins
+   * @param box Stein, welcher gesetzt werden soll
+   */
+  setBox(x: number, y: number, box: Box): void
   {
     x += box.ofsX;
     y += box.ofsY;
@@ -161,10 +253,10 @@ class Field
     }
   }
 
-  /** entfernt eine Box wieder aus dem Spielfeld
-   * @param x X-Position der Box
-   * @param y Y-Position der Box
-   * @param box Box, welche entfernt werden soll
+  /** entfernt einen Stein wieder aus dem Spielfeld
+   * @param x X-Position des Steins
+   * @param y Y-Position des Steins
+   * @param box Stein, welcher entfernt werden soll
    */
   removeBox(x: number, y: number, box: Box): void
   {
@@ -180,10 +272,10 @@ class Field
     }
   }
 
-  /** prüft, ob eine bestimmte Box gesetzt werden kann
-   * @param x X-Position der Box
-   * @param y Y-Position der Box
-   * @param box Box, welche geprüft werden soll
+  /** prüft, ob ein bestimmter Stein gesetzt werden kann
+   * @param x X-Position des Steins
+   * @param y Y-Position des Steins
+   * @param box Stein, welcher geprüft werden soll
    */
   checkBox(x: number, y: number, box: Box): boolean
   {
