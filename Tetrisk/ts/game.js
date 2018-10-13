@@ -27,6 +27,8 @@ var Game = (function () {
         this.ticks = 0;
         /** merkt sich, wann der Stein das letzte mal nach unten bewegt wurde */
         this.ticksLastDown = 0;
+        /** merkt sich, ob bei der Steuerung von Steinen direkt am Boden geholfen werden darf */
+        this.helperDownTick = true;
         // --- Spielfeld initialisieren ---
         this.field = new Field(parentDiv, fieldWidth, fieldHeight, maxWidth, maxHeight);
         // --- Standard-Tastencodes setzen ---
@@ -137,6 +139,15 @@ var Game = (function () {
         this.field.setBox(this.currentX, this.currentY, this.currentBox);
         return canMove;
     };
+    /**
+     * Hilfsmethode, damit ein gerade bewegter Stein nicht zu schnell gesetzt wird
+     */
+    Game.prototype.downHelper = function () {
+        if (this.helperDownTick && !this.moveBox(0, +1, 0, true)) {
+            this.ticksLastDown = 0; // Auto-Tick für nach unten Bewegungen auf 0 setzen, damit der eben bewegte Stein nicht zu schnell aufgesetzt wird
+            this.helperDownTick = false; // jetzigen Down-Helper als verbraucht markieren (wird zurück gesetzt, sobald der Stein sich wieder eins nach unten bewegt)
+        }
+    };
     //#endregion
     //#region // --- Tick ---
     /** führt eine oder mehrere Tick-Berechnungen durch
@@ -183,12 +194,14 @@ var Game = (function () {
                     if (this.keyRotateNext < 0) {
                         this.keyRotateNext++;
                         if (this.moveBox(0, 0, -1)) {
+                            this.downHelper();
                             this.keyRotateWait = Game.tickMoveRepeat; // Limiter setzen
                         }
                     }
                     else {
                         this.keyRotateNext--;
                         if (this.moveBox(0, 0, +1)) {
+                            this.downHelper();
                             this.keyRotateWait = Game.tickMoveRepeat; // Limiter setzen
                         }
                     }
@@ -203,6 +216,7 @@ var Game = (function () {
                     if (this.keyMoveNext < 0) {
                         this.keyMoveNext++;
                         if (this.moveBox(-1, 0, 0)) {
+                            this.downHelper();
                             this.keyMoveWait = Game.tickMoveRepeat; // Limiter setzen und
                             break;
                         }
@@ -210,6 +224,7 @@ var Game = (function () {
                     else {
                         this.keyMoveNext--;
                         if (this.moveBox(+1, 0, 0)) {
+                            this.downHelper();
                             this.keyMoveWait = Game.tickMoveRepeat; // Limiter setzen und
                             break;
                         }
@@ -221,7 +236,8 @@ var Game = (function () {
             }
             // --- nach unten Bewegung ausführen ---
             if (this.keyDown > 0 ? this.ticksLastDown >= Game.tickDownRepeat : this.ticksLastDown >= Game.tickDownTimeout) {
-                this.ticksLastDown = 0;
+                this.ticksLastDown = 0; // Auto-Timer zurücksetzen
+                this.helperDownTick = true; // Down-Helper zurücksetzen
                 if (!this.moveBox(0, +1, 0)) {
                     var scan = this.field.scanLines();
                     if (scan.length) {

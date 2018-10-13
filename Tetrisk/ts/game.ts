@@ -53,6 +53,8 @@ class Game
   private ticks = 0;
   /** merkt sich, wann der Stein das letzte mal nach unten bewegt wurde */
   private ticksLastDown = 0;
+  /** merkt sich, ob bei der Steuerung von Steinen direkt am Boden geholfen werden darf */
+  private helperDownTick = true;
   /** merkt sich das aktuelle Tick-Handle */
   private tickHandle;
 
@@ -206,6 +208,18 @@ class Game
 
     return canMove;
   }
+
+  /**
+   * Hilfsmethode, damit ein gerade bewegter Stein nicht zu schnell gesetzt wird
+   */
+  downHelper(): void
+  {
+    if (this.helperDownTick && !this.moveBox(0, +1, 0, true))
+    {
+      this.ticksLastDown = 0;      // Auto-Tick für nach unten Bewegungen auf 0 setzen, damit der eben bewegte Stein nicht zu schnell aufgesetzt wird
+      this.helperDownTick = false; // jetzigen Down-Helper als verbraucht markieren (wird zurück gesetzt, sobald der Stein sich wieder eins nach unten bewegt)
+    }
+  }
   //#endregion
 
   //#region // --- Tick ---
@@ -264,6 +278,7 @@ class Game
             this.keyRotateNext++;
             if (this.moveBox(0, 0, -1)) // links drehen
             {
+              this.downHelper();
               this.keyRotateWait = Game.tickMoveRepeat; // Limiter setzen
             }
           }
@@ -272,6 +287,7 @@ class Game
             this.keyRotateNext--;
             if (this.moveBox(0, 0, +1)) // rechts drehen
             {
+              this.downHelper();
               this.keyRotateWait = Game.tickMoveRepeat; // Limiter setzen
             }
           }
@@ -292,6 +308,7 @@ class Game
             this.keyMoveNext++;
             if (this.moveBox(-1, 0, 0)) // links Bewegung erfolgreich?
             {
+              this.downHelper();
               this.keyMoveWait = Game.tickMoveRepeat; // Limiter setzen und
               break;                                  // weitere Bewegungen aktuell verhindern
             }
@@ -301,6 +318,7 @@ class Game
             this.keyMoveNext--;
             if (this.moveBox(+1, 0, 0)) // rechts Bewegung erfolgreich?
             {
+              this.downHelper();
               this.keyMoveWait = Game.tickMoveRepeat; // Limiter setzen und
               break;                                  // weitere Bewegungen aktuell verhindern
             }
@@ -318,7 +336,8 @@ class Game
         : this.ticksLastDown >= Game.tickDownTimeout
       )
       {
-        this.ticksLastDown = 0;
+        this.ticksLastDown = 0;     // Auto-Timer zurücksetzen
+        this.helperDownTick = true; // Down-Helper zurücksetzen
         if (!this.moveBox(0, +1, 0))
         {
           var scan = this.field.scanLines();
