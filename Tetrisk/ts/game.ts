@@ -27,37 +27,14 @@ class Game
   static tickDownRepeat = 60;
   /** Wiederholrate für automatisches nach unten bewegen */
   static tickDownTimeout = 600;
+  /** Zeit, wie lange es dauert, bis vollständige Zeilen entfernt wurden */
+  static tickLinesRemove = 450;
+  /** Zeit, wie schnell entfernte Zeilen flackern sollen */
+  static tickLinesFlicker = 17;
 
   //#region // --- Variablen ---
   /** merkt sich das aktuelle Spielfeld */
   field: Field;
-  /** merkt sich die aktuell eingestellten Tasten */
-  private keys: GameKeys;
-  /** gibt an, ob und wie lange die Taste zum links-bewegen gedrückt wurde */
-  private keyLeft = 0;
-  /** gibt an, ob und wie lange die Taste zum rechts-bewegen gedrückt wurde */
-  private keyRight = 0;
-  /** gibt an, wie lange noch gewartet werden muss, bis die nächste links/rechts Taste gedrückt werden darf */
-  private keyMoveWait = 0;
-  /** gibt an, in welcher Richtung das nächste mal der Stein bewegt werden soll (falls die Richtungstasten zu schnell hintereinander gedrückt wurden) */
-  private keyMoveNext = 0;
-  /** gibt an, ob und wie lange die Taste zum nachunten-bewegen gedrückt wurde */
-  private keyDown = 0;
-  /** gibt an, ob eine Taste zum drehen gedrückt wurde */
-  private keyRotate = false;
-  /** gibt an, wie lange noch gewartet werden muss, bis das nächste mal der Stein gedreht werden darf */
-  private keyRotateWait = 0;
-  /** gibt an, in welcher Richtung das nächste mal der Stein gedreht werden soll (falls die Drehtasten zu schnell hintereinander gedrückt wurden) */
-  private keyRotateNext = 0;
-  /** merkt sich die Anzahl der Ticks, welche bereits verarbeitet wurden */
-  private ticks = 0;
-  /** merkt sich, wann der Stein das letzte mal nach unten bewegt wurde */
-  private ticksLastDown = 0;
-  /** merkt sich, ob bei der Steuerung von Steinen direkt am Boden geholfen werden darf */
-  private helperDownTick = true;
-  /** merkt sich das aktuelle Tick-Handle */
-  private tickHandle;
-
   /** aktueller Stein, welcher momentan gesteuert wird */
   private currentBox: Box;
   /** X-Position des aktuellen Steins */
@@ -66,6 +43,38 @@ class Game
   private currentY: number;
   /** Stein, welcher als nächstes dran ist */
   private nextBox: Box;
+
+  /** merkt sich die aktuell eingestellten Tasten */
+  private keys: GameKeys;
+  /** gibt an, ob und wie lange die Taste zum links-bewegen gedrückt wurde */
+  private keyLeft: number;
+  /** gibt an, ob und wie lange die Taste zum rechts-bewegen gedrückt wurde */
+  private keyRight: number;
+  /** gibt an, wie lange noch gewartet werden muss, bis die nächste links/rechts Taste gedrückt werden darf */
+  private keyMoveWait: number;
+  /** gibt an, in welcher Richtung das nächste mal der Stein bewegt werden soll (falls die Richtungstasten zu schnell hintereinander gedrückt wurden) */
+  private keyMoveNext: number;
+  /** gibt an, ob und wie lange die Taste zum nachunten-bewegen gedrückt wurde */
+  private keyDown: number;
+  /** gibt an, ob eine Taste zum drehen gedrückt wurde */
+  private keyRotate: boolean;
+  /** gibt an, wie lange noch gewartet werden muss, bis das nächste mal der Stein gedreht werden darf */
+  private keyRotateWait: number;
+  /** gibt an, in welcher Richtung das nächste mal der Stein gedreht werden soll (falls die Drehtasten zu schnell hintereinander gedrückt wurden) */
+  private keyRotateNext: number;
+
+  /** merkt sich das aktuelle Tick-Handle */
+  private tickHandle;
+  /** merkt sich die Anzahl der Ticks, welche bereits verarbeitet wurden */
+  private ticks: number;
+  /** merkt sich, wann der Stein das letzte mal nach unten bewegt wurde */
+  private ticksLastDown: number;
+  /** merkt sich, ob bei der Steuerung von Steinen direkt am Boden geholfen werden darf */
+  private helperDownTick: boolean;
+  /** komplette Zeilen, welche erkannt werden (length == 0, wenn keine vorhanden) */
+  private scanlines: number[];
+  /** Wartepause um die kompletten Zeilen zu entfernen */
+  private scanlinesWait: number;
   //#endregion
 
   //#region // --- Konstruktor ---
@@ -115,7 +124,21 @@ class Game
   {
     if (this.tickHandle) { return; }; // todo: restart running process
 
-    this.nextBox = boxes[Math.floor(Math.random() * boxes.length)];
+    this.keyLeft = 0;
+    this.keyRight = 0;
+    this.keyMoveWait = 0;
+    this.keyMoveNext = 0;
+    this.keyDown = 0;
+    this.keyRotate = false;
+    this.keyRotateWait = 0;
+    this.keyRotateNext = 0;
+    this.ticks = 0;
+    this.ticksLastDown = 0;
+    this.helperDownTick = true;
+    this.scanlines = [];
+    this.scanlinesWait = 0;
+
+    this.nextBox = this.rndNextBox();
     this.getNextBox();
 
     var my = this;
@@ -166,6 +189,12 @@ class Game
   //#endregion
 
   //#region // --- Steine-Hilfsmethoden ---
+  /** gibt die nächste zufällige Box zurück */
+  rndNextBox(): Box
+  {
+    return boxes[Math.floor(Math.random() * boxes.length)];
+  }
+
   /** wechselt zum nächsten Stein und prüft, ob das Spiel weitergeführt werden kann */
   getNextBox(): boolean
   {
@@ -173,7 +202,7 @@ class Game
     this.currentX = Math.floor(this.field.width / 2 - .5);
     this.currentY = 0;
     var alive = this.field.checkBox(this.currentX, this.currentY, this.currentBox);
-    this.nextBox = boxes[Math.floor(Math.random() * boxes.length)];
+    this.nextBox = this.rndNextBox();
     this.field.previewBox(this.nextBox);
 
     this.field.setBox(this.currentX, this.currentY, this.currentBox);
@@ -230,6 +259,7 @@ class Game
   {
     if (count <= 0) { return; }
 
+    // --- Tasten abfragen ---
     var pressLeft = Game.isPressed(this.keys.left);
     var pressRight = Game.isPressed(this.keys.right);
     var pressDown = Game.isPressed(this.keys.down);
@@ -254,11 +284,37 @@ class Game
     // --- Ablauf-Ticks berechnen ---
     while (count > 0)
     {
+      if (this.scanlinesWait > 0)
+      {
+        this.scanlinesWait--;
+        if (this.scanlinesWait > 0)
+        {
+          if (this.scanlinesWait % Game.tickLinesFlicker === 0)
+          {
+            this.field.linesMark(this.scanlines, this.scanlinesWait % (Game.tickLinesFlicker * 2) === 0 ? CellType.Blink : CellType.Empty);
+          }
+          this.ticks++;
+          count--;
+          continue;
+        }
+
+        this.field.linesRemove(this.scanlines);
+        this.scanlines = [];
+
+        if (!this.getNextBox())
+        {
+          // todo: Spieler hat verloren
+          return;
+        }
+        this.keyDown = -Game.tickMoveStart; // bereits gedrückte unten-Taste für eine kurze Zeit blocken, damit der nachfolgenden Stein nicht sofort losrennt
+      }
+
       // --- gedrückte Tasten berechnen ---
       this.keyLeft = pressLeft ? this.keyLeft + 1 : 0;
       this.keyRight = pressRight ? this.keyRight + 1 : 0;
       this.keyDown = pressDown ? this.keyDown + 1 : 0;
 
+      // --- links/rechts Bewegung berechnen ---
       if (this.keyLeft === 1 || this.keyRight === 0 && this.keyMoveNext >= 0 && this.keyLeft > Game.tickMoveStart && (this.keyLeft - Game.tickMoveStart) % Game.tickMoveRepeat === 1)
       {
         if (this.moveBox(this.keyMoveNext - 1, 0, 0, true)) this.keyMoveNext--;
@@ -340,36 +396,20 @@ class Game
         this.helperDownTick = true; // Down-Helper zurücksetzen
         if (!this.moveBox(0, +1, 0))
         {
-          var scan = this.field.scanLines();
-          if (scan.length)
+          this.scanlines = this.field.scanLines();
+          if (this.scanlines.length)
           {
-            var w = this.field.width;
-            var c = this.field.cells;
-            for (var i = 0; i < scan.length; i++)
+            this.scanlinesWait = Game.tickLinesRemove;
+          }
+          else
+          {
+            if (!this.getNextBox())
             {
-              for (var y = scan[i] * w; y > 0; y -= w)
-              {
-                for (var x = 0; x < w; x++)
-                {
-                  c[x + y].data = c[x + y - w].data;
-                }
-              }
-              for (var l = 0; l < w; l++)
-              {
-                c[l].data = CellType.Empty;
-              }
+              // todo: Spieler hat verloren
+              return;
             }
-
-            // todo: viele Linien an den Gegner senden
+            this.keyDown = -Game.tickMoveStart; // bereits gedrückte unten-Taste für eine kurze Zeit blocken, damit der nachfolgenden Stein nicht sofort losrennt
           }
-
-          if (!this.getNextBox())
-          {
-            // todo: Spieler hat verloren
-            return;
-          }
-
-          this.keyDown = -Game.tickMoveStart; // bereits gedrückte unten-Taste für eine kurze Zeit blocken, damit der nachfolgenden Stein nicht sofort losrennt
         }
       }
       else

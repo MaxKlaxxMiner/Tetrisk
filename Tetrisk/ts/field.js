@@ -232,20 +232,53 @@ var Field = (function () {
     };
     /** scannt nach vollständigen Zeilen und gibt diese zurück (sofern welche vorhanden) */
     Field.prototype.scanLines = function () {
+        var w = this.width;
+        var c = this.cells;
         var foundLines = [];
         for (var line = 0; line < this.height; line++) {
             var cells = 0;
-            for (var col = 0; col < this.width; col++) {
-                if (this.cells[col + line * this.width].data === 0 /* Empty */) {
+            for (var x = 0; x < w; x++) {
+                if (c[x + line * w].data === 0 /* Empty */) {
                     break;
                 }
                 cells++;
             }
-            if (cells === this.width) {
+            if (cells === w) {
                 foundLines.push(line);
             }
         }
         return foundLines;
+    };
+    /** entfernt Zeilen aus dem Spielfeld
+     * @param lines Zeilen, welche entfernt werden sollen
+     */
+    Field.prototype.linesRemove = function (lines) {
+        var w = this.width;
+        var c = this.cells;
+        for (var i = 0; i < lines.length; i++) {
+            for (var y = lines[i] * w; y > 0; y -= w) {
+                for (var x = 0; x < w; x++) {
+                    c[x + y].data = c[x + y - w].data;
+                }
+            }
+            for (var l = 0; l < w; l++) {
+                c[l].data = 0 /* Empty */;
+            }
+        }
+    };
+    /** markiert Zeilen auf dem Spielfeld
+     * @param lines Zeilen, welche markiert werden sollen
+     * @param cellType Zellentyp, welcher gesetzt werden soll
+     */
+    Field.prototype.linesMark = function (lines, cellType) {
+        var w = this.width;
+        var c = this.cells;
+        for (var i = 0; i < lines.length; i++) {
+            var l = lines[i] * w;
+            for (var x = 0; x < w; x++) {
+                c[l + x].data = cellType;
+            }
+        }
     };
     return Field;
 })();

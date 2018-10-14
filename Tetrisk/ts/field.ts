@@ -296,17 +296,60 @@ class Field
   /** scannt nach vollständigen Zeilen und gibt diese zurück (sofern welche vorhanden) */
   scanLines(): number[]
   {
+    var w = this.width;
+    var c = this.cells;
     var foundLines: number[] = [];
     for (var line = 0; line < this.height; line++)
     {
       var cells = 0;
-      for (var col = 0; col < this.width; col++)
+      for (var x = 0; x < w; x++)
       {
-        if (this.cells[col + line * this.width].data === CellType.Empty) { break; }
+        if (c[x + line * w].data === CellType.Empty) { break; }
         cells++;
       }
-      if (cells === this.width) { foundLines.push(line); }
+      if (cells === w) { foundLines.push(line); }
     }
     return foundLines;
+  }
+
+  /** entfernt Zeilen aus dem Spielfeld
+   * @param lines Zeilen, welche entfernt werden sollen
+   */
+  linesRemove(lines: number[])
+  {
+    var w = this.width;
+    var c = this.cells;
+    for (var i = 0; i < lines.length; i++)
+    {
+      for (var y = lines[i] * w; y > 0; y -= w)
+      {
+        for (var x = 0; x < w; x++)
+        {
+          c[x + y].data = c[x + y - w].data;
+        }
+      }
+      for (var l = 0; l < w; l++)
+      {
+        c[l].data = CellType.Empty;
+      }
+    }
+  }
+
+  /** markiert Zeilen auf dem Spielfeld
+   * @param lines Zeilen, welche markiert werden sollen
+   * @param cellType Zellentyp, welcher gesetzt werden soll 
+   */
+  linesMark(lines: number[], cellType: CellType)
+  {
+    var w = this.width;
+    var c = this.cells;
+    for (var i = 0; i < lines.length; i++)
+    {
+      var l = lines[i] * w;
+      for (var x = 0; x < w; x++)
+      {
+        c[l + x].data = cellType;
+      }
+    }
   }
 }
