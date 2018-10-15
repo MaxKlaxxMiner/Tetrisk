@@ -78,6 +78,7 @@
     <TypeScriptCompile Include="ts\boxes.ts" />
     <TypeScriptCompile Include="ts\field.ts" />
     <TypeScriptCompile Include="ts\game.ts" />
+    <TypeScriptCompile Include="ts\logger.ts" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>

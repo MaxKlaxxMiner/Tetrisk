@@ -1,6 +1,7 @@
 /* tslint:disable:one-line max-line-length interface-name comment-format */
 /// <reference path="boxes.ts" />
 /// <reference path="field.ts" />
+/// <reference path="logger.ts" />
 var game;
 var keys = {};
 var Game = (function () {
@@ -53,6 +54,7 @@ var Game = (function () {
         this.helperDownTick = true;
         this.scanlines = [];
         this.scanlinesWait = 0;
+        this.logWriter = new Logger();
         this.nextBox = this.rndNextBox();
         this.getNextBox();
         var my = this;
@@ -107,6 +109,7 @@ var Game = (function () {
         this.nextBox = this.rndNextBox();
         this.field.previewBox(this.nextBox);
         this.field.setBox(this.currentX, this.currentY, this.currentBox);
+        this.logWriter && this.logWriter.writeBox(this.ticks, this.currentBox);
         return alive;
     };
     /** bewegt den aktuellen Stein und gibt zurück, ob dies möglich war
@@ -171,6 +174,7 @@ var Game = (function () {
         else {
             this.keyRotate = false;
         }
+        this.logWriter && this.logWriter.writeKeys(this.ticks, count, pressLeft, pressRight, pressDown, rCw, rCc);
         while (count > 0) {
             if (this.scanlinesWait > 0) {
                 this.scanlinesWait--;
@@ -183,6 +187,7 @@ var Game = (function () {
                     continue;
                 }
                 this.field.linesRemove(this.scanlines);
+                this.logWriter && this.logWriter.writeLines(this.ticks, this.scanlines, true);
                 this.scanlines = [];
                 if (!this.getNextBox()) {
                     // todo: Spieler hat verloren
@@ -210,6 +215,7 @@ var Game = (function () {
                         this.keyRotateNext++;
                         if (this.moveBox(0, 0, -1)) {
                             this.downHelper();
+                            this.logWriter && this.logWriter.writeMove(this.ticks, 0, 0, -1);
                             this.keyRotateWait = Game.tickMoveRepeat; // Limiter setzen
                         }
                     }
@@ -217,6 +223,7 @@ var Game = (function () {
                         this.keyRotateNext--;
                         if (this.moveBox(0, 0, +1)) {
                             this.downHelper();
+                            this.logWriter && this.logWriter.writeMove(this.ticks, 0, 0, +1);
                             this.keyRotateWait = Game.tickMoveRepeat; // Limiter setzen
                         }
                     }
@@ -232,6 +239,7 @@ var Game = (function () {
                         this.keyMoveNext++;
                         if (this.moveBox(-1, 0, 0)) {
                             this.downHelper();
+                            this.logWriter && this.logWriter.writeMove(this.ticks, -1, 0, 0);
                             this.keyMoveWait = Game.tickMoveRepeat; // Limiter setzen und
                             break;
                         }
@@ -240,6 +248,7 @@ var Game = (function () {
                         this.keyMoveNext--;
                         if (this.moveBox(+1, 0, 0)) {
                             this.downHelper();
+                            this.logWriter && this.logWriter.writeMove(this.ticks, +1, 0, 0);
                             this.keyMoveWait = Game.tickMoveRepeat; // Limiter setzen und
                             break;
                         }
@@ -253,10 +262,14 @@ var Game = (function () {
             if (this.keyDown > 0 ? this.ticksLastDown >= Game.tickDownRepeat : this.ticksLastDown >= Game.tickDownTimeout) {
                 this.ticksLastDown = 0; // Auto-Timer zurücksetzen
                 this.helperDownTick = true; // Down-Helper zurücksetzen
-                if (!this.moveBox(0, +1, 0)) {
+                if (this.moveBox(0, +1, 0)) {
+                    this.logWriter && this.logWriter.writeMove(this.ticks, 0, +1, 0);
+                }
+                else {
                     this.scanlines = this.field.scanLines();
                     if (this.scanlines.length) {
                         this.scanlinesWait = Game.tickLinesRemove;
+                        this.logWriter && this.logWriter.writeLines(this.ticks, this.scanlines, false);
                     }
                     else {
                         if (!this.getNextBox()) {
@@ -274,6 +287,9 @@ var Game = (function () {
             count--;
         }
         this.field.view();
+        if (this.logWriter) {
+            document.title = "Log: " + this.logWriter.data.length + " (" + (JSON.stringify(this.logWriter.data).length / 1024 / this.ticks * 1000).toFixed(1) + " kByte/s)";
+        }
     };
     // --- Konstanten fürs Timing (müssen die gleichen wie in der .Net Umgebung sein, sonst könnte ein Cheat-Verdacht ausgeworfen werden) ---
     /** Startwert, ab wann eine links/rechts Taste automatisch wiederholt wird */

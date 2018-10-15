@@ -1,6 +1,7 @@
 ﻿/* tslint:disable:one-line max-line-length interface-name comment-format */
 /// <reference path="boxes.ts" />
 /// <reference path="field.ts" />
+/// <reference path="logger.ts" />
 
 var game: Game;
 
@@ -35,6 +36,8 @@ class Game
   //#region // --- Variablen ---
   /** merkt sich das aktuelle Spielfeld */
   field: Field;
+  /** merkt sich den Logger, wohin gerade geschrieben wird */
+  logWriter: Logger;
   /** aktueller Stein, welcher momentan gesteuert wird */
   private currentBox: Box;
   /** X-Position des aktuellen Steins */
@@ -138,6 +141,8 @@ class Game
     this.scanlines = [];
     this.scanlinesWait = 0;
 
+    this.logWriter = new Logger();
+
     this.nextBox = this.rndNextBox();
     this.getNextBox();
 
@@ -206,6 +211,8 @@ class Game
     this.field.previewBox(this.nextBox);
 
     this.field.setBox(this.currentX, this.currentY, this.currentBox);
+
+    this.logWriter && this.logWriter.writeBox(this.ticks, this.currentBox);
 
     return alive;
   }
@@ -281,6 +288,8 @@ class Game
       this.keyRotate = false;
     }
 
+    this.logWriter && this.logWriter.writeKeys(this.ticks, count, pressLeft, pressRight, pressDown, rCw, rCc);
+
     // --- Ablauf-Ticks berechnen ---
     while (count > 0)
     {
@@ -299,6 +308,7 @@ class Game
         }
 
         this.field.linesRemove(this.scanlines);
+        this.logWriter && this.logWriter.writeLines(this.ticks, this.scanlines, true);
         this.scanlines = [];
 
         if (!this.getNextBox())
@@ -335,6 +345,7 @@ class Game
             if (this.moveBox(0, 0, -1)) // links drehen
             {
               this.downHelper();
+              this.logWriter && this.logWriter.writeMove(this.ticks, 0, 0, -1);
               this.keyRotateWait = Game.tickMoveRepeat; // Limiter setzen
             }
           }
@@ -344,6 +355,7 @@ class Game
             if (this.moveBox(0, 0, +1)) // rechts drehen
             {
               this.downHelper();
+              this.logWriter && this.logWriter.writeMove(this.ticks, 0, 0, +1);
               this.keyRotateWait = Game.tickMoveRepeat; // Limiter setzen
             }
           }
@@ -365,6 +377,7 @@ class Game
             if (this.moveBox(-1, 0, 0)) // links Bewegung erfolgreich?
             {
               this.downHelper();
+              this.logWriter && this.logWriter.writeMove(this.ticks, -1, 0, 0);
               this.keyMoveWait = Game.tickMoveRepeat; // Limiter setzen und
               break;                                  // weitere Bewegungen aktuell verhindern
             }
@@ -375,6 +388,7 @@ class Game
             if (this.moveBox(+1, 0, 0)) // rechts Bewegung erfolgreich?
             {
               this.downHelper();
+              this.logWriter && this.logWriter.writeMove(this.ticks, +1, 0, 0);
               this.keyMoveWait = Game.tickMoveRepeat; // Limiter setzen und
               break;                                  // weitere Bewegungen aktuell verhindern
             }
@@ -390,16 +404,21 @@ class Game
       if (this.keyDown > 0
         ? this.ticksLastDown >= Game.tickDownRepeat
         : this.ticksLastDown >= Game.tickDownTimeout
-      )
+        )
       {
         this.ticksLastDown = 0;     // Auto-Timer zurücksetzen
         this.helperDownTick = true; // Down-Helper zurücksetzen
-        if (!this.moveBox(0, +1, 0))
+        if (this.moveBox(0, +1, 0))
+        {
+          this.logWriter && this.logWriter.writeMove(this.ticks, 0, +1, 0);
+        }
+        else
         {
           this.scanlines = this.field.scanLines();
           if (this.scanlines.length)
           {
             this.scanlinesWait = Game.tickLinesRemove;
+            this.logWriter && this.logWriter.writeLines(this.ticks, this.scanlines, false);
           }
           else
           {
@@ -422,6 +441,10 @@ class Game
     }
 
     this.field.view();
+    if (this.logWriter)
+    {
+      document.title = "Log: " + this.logWriter.data.length + " (" + (JSON.stringify(this.logWriter.data).length / 1024 / this.ticks * 1000).toFixed(1) + " kByte/s)";
+    }
   }
   //#endregion
 }
